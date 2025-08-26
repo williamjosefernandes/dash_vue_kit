@@ -181,7 +181,9 @@ const getSubjectNames = (subjectIds: string[]) => {
   <UiParentCard title="Meus Planos de Estudo">
     <template v-slot:action>
       <v-btn color="primary" @click="openDialog()" prepend-icon="mdi-plus">
-        Novo Plano
+        <router-link to="/main/plans/new" class="text-decoration-none text-white">
+          Novo Plano
+        </router-link>
       </v-btn>
     </template>
 
@@ -306,137 +308,10 @@ const getSubjectNames = (subjectIds: string[]) => {
         Organize seus estudos criando planos estruturados com metas e cronogramas
       </p>
       <v-btn color="primary" @click="openDialog()" prepend-icon="mdi-plus">
-        Criar Primeiro Plano
+        <router-link to="/main/plans/new" class="text-decoration-none text-white">
+          Criar Primeiro Plano
+        </router-link>
       </v-btn>
     </div>
   </UiParentCard>
-
-  <!-- Dialog para Adicionar/Editar Plano -->
-  <v-dialog v-model="dialog" max-width="600px">
-    <v-card>
-      <v-card-title>
-        {{ editMode ? 'Editar Plano' : 'Novo Plano de Estudo' }}
-      </v-card-title>
-      
-      <v-card-text>
-        <v-form>
-          <v-text-field
-            v-model="currentPlan.name"
-            label="Nome do Plano"
-            :rules="[rules.required]"
-            variant="outlined"
-            class="mb-4"
-            placeholder="Ex: Preparação para ENEM 2024"
-          />
-          
-          <v-textarea
-            v-model="currentPlan.description"
-            label="Descrição"
-            variant="outlined"
-            rows="3"
-            class="mb-4"
-            placeholder="Descreva os objetivos e estratégias do plano"
-          />
-          
-          <v-row>
-            <v-col cols="12" sm="6">
-              <v-text-field
-                v-model="currentPlan.startDate"
-                label="Data de Início"
-                type="date"
-                :rules="[rules.required]"
-                variant="outlined"
-                class="mb-4"
-              />
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field
-                v-model="currentPlan.endDate"
-                label="Data de Término"
-                type="date"
-                :rules="[rules.required]"
-                variant="outlined"
-                class="mb-4"
-              />
-            </v-col>
-          </v-row>
-          
-          <v-select
-            v-model="currentPlan.subjects"
-            :items="studyStore.subjects"
-            item-title="name"
-            item-value="id"
-            label="Disciplinas do Plano"
-            variant="outlined"
-            multiple
-            chips
-            class="mb-4"
-          />
-          
-          <v-row>
-            <v-col cols="12" sm="6">
-              <v-text-field
-                v-model.number="currentPlan.dailyGoal"
-                label="Meta Diária (horas)"
-                type="number"
-                :rules="[rules.required, rules.minGoal]"
-                variant="outlined"
-                class="mb-4"
-              />
-            </v-col>
-            <v-col cols="12" sm="6">
-              <v-text-field
-                v-model.number="currentPlan.weeklyGoal"
-                label="Meta Semanal (horas)"
-                type="number"
-                :rules="[rules.required, rules.minGoal]"
-                variant="outlined"
-                class="mb-4"
-              />
-            </v-col>
-          </v-row>
-          
-          <v-select
-            v-model="currentPlan.status"
-            :items="statusOptions"
-            label="Status do Plano"
-            variant="outlined"
-            class="mb-4"
-          />
-          
-          <div class="mb-4">
-            <v-label class="mb-2">Prioridade</v-label>
-            <v-chip-group v-model="currentPlan.priority" mandatory>
-              <v-chip value="low" color="success" variant="tonal">Baixa</v-chip>
-              <v-chip value="medium" color="warning" variant="tonal">Média</v-chip>
-              <v-chip value="high" color="error" variant="tonal">Alta</v-chip>
-            </v-chip-group>
-          </div>
-          
-          <div class="mb-4">
-            <v-label class="mb-2">Cor do Plano</v-label>
-            <v-chip-group v-model="currentPlan.color" mandatory>
-              <v-chip
-                v-for="color in colors"
-                :key="color.value"
-                :value="color.value"
-                :color="color.value"
-                variant="tonal"
-              >
-                {{ color.name }}
-              </v-chip>
-            </v-chip-group>
-          </div>
-        </v-form>
-      </v-card-text>
-      
-      <v-card-actions>
-        <v-spacer />
-        <v-btn @click="dialog = false">Cancelar</v-btn>
-        <v-btn color="primary" @click="savePlan">
-          {{ editMode ? 'Salvar' : 'Criar Plano' }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 </template>
