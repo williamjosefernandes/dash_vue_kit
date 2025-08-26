@@ -185,21 +185,27 @@ const updateTotalHours = () => {
 // Função para parsear a estrutura importada
 const parseImportedStructure = (text: string) => {
   const topics: Topic[] = [];
-  const lines = text.split(/(?=\d+\s)/).filter(line => line.trim());
+  const lines = text.split(/\s+(?=\d+(?:\.\d+)?\s)/).filter(line => line.trim());
   
-  lines.forEach(line => {
+  // Primeiro, vamos organizar o texto em uma estrutura mais limpa
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+  
+  // Regex para capturar tópicos principais e seus subtópicos
+  const topicMatches = cleanText.match(/\d+\s[^0-9]+?(?=\s\d+(?:\.\d+)?\s|$)/g) || [];
+  
+  topicMatches.forEach(topicText => {
     const trimmedLine = line.trim();
     if (!trimmedLine) return;
     
-    // Regex para capturar número do tópico e conteúdo
-    const topicMatch = trimmedLine.match(/^(\d+)\s+(.+?)(?=\s+\d+\.\d+|\s+\d+\s|$)/);
+    // Extrair o número e título do tópico principal
+    const topicMatch = topicText.match(/^(\d+)\s+(.+?)(?=\s+\d+\.\d+|$)/);
     if (topicMatch) {
       const [, topicNumber, topicContent] = topicMatch;
       
       // Criar o tópico principal
       const topic: Topic = {
         id: Date.now().toString() + topicNumber,
-        name: `${topicNumber}. ${topicContent.trim()}`,
+        name: topicContent.trim(),
         description: '',
         estimatedHours: 2, // Valor padrão
         studiedHours: 0,
@@ -209,15 +215,15 @@ const parseImportedStructure = (text: string) => {
       };
       
       // Buscar subtópicos relacionados
-      const subtopicRegex = new RegExp(`${topicNumber}\\.(\\d+)\\s+([^\\d]+?)(?=\\s+\\d+\\.\\d+|\\s+\\d+\\s|$)`, 'g');
+      const subtopicRegex = new RegExp(`${topicNumber}\\.(\\d+)\\s+([^0-9]+?)(?=\\s+\\d+(?:\\.\\d+)?\\s|$)`, 'g');
       let subtopicMatch;
       
-      while ((subtopicMatch = subtopicRegex.exec(trimmedLine)) !== null) {
+      while ((subtopicMatch = subtopicRegex.exec(topicText)) !== null) {
         const [, subtopicNumber, subtopicContent] = subtopicMatch;
         
         const subtopic: Subtopic = {
           id: Date.now().toString() + topicNumber + subtopicNumber,
-          name: `${topicNumber}.${subtopicNumber}. ${subtopicContent.trim()}`,
+          name: subtopicContent.trim(),
           description: '',
           estimatedHours: 1, // Valor padrão
           studiedHours: 0,
@@ -235,6 +241,61 @@ const parseImportedStructure = (text: string) => {
   return topics;
 };
 
+// Função alternativa mais robusta para parsing
+const parseImportedStructureRobust = (text: string) => {
+  const topics: Topic[] = [];
+  const topicMap = new Map<string, Topic>();
+  
+  // Limpar e normalizar o texto
+  const normalizedText = text.replace(/\s+/g, ' ').trim();
+  
+  // Regex para encontrar todos os itens numerados
+  const itemRegex = /(\d+(?:\.\d+)?)\s+([^0-9]+?)(?=\s+\d+(?:\.\d+)?\s|$)/g;
+  let match;
+  
+  while ((match = itemRegex.exec(normalizedText)) !== null) {
+    const [, number, content] = match;
+    const cleanContent = content.trim();
+    
+    if (number.includes('.')) {
+      // É um subtópico
+      const [topicNum, subtopicNum] = number.split('.');
+      const parentTopic = topicMap.get(topicNum);
+      
+      if (parentTopic) {
+        const subtopic: Subtopic = {
+          id: Date.now().toString() + number.replace('.', ''),
+          name: cleanContent,
+          description: '',
+          estimatedHours: 1,
+          studiedHours: 0,
+          completed: false,
+          order: parseInt(subtopicNum) - 1
+        };
+        
+        parentTopic.subtopics.push(subtopic);
+      }
+    } else {
+      // É um tópico principal
+      const topic: Topic = {
+        id: Date.now().toString() + number,
+        name: cleanContent,
+        description: '',
+        estimatedHours: 2,
+        studiedHours: 0,
+        completed: false,
+        subtopics: [],
+        order: parseInt(number) - 1
+      };
+      
+      topics.push(topic);
+      topicMap.set(number, topic);
+    }
+  }
+  
+  return topics;
+};
+
 // Função para gerar preview da importação
 const generateImportPreview = () => {
   if (!importText.value.trim()) {
@@ -243,7 +304,7 @@ const generateImportPreview = () => {
   }
   
   try {
-    const parsedTopics = parseImportedStructure(importText.value);
+    const parsedTopics = parseImportedStructureRobust(importText.value);
     importPreview.value = { topics: parsedTopics };
     showPreview.value = true;
   } catch (error) {
@@ -1008,9 +1069,10 @@ onMounted(() => {
           <v-alert type="info" variant="tonal" density="compact">
             <div class="text-caption">
               <strong>Formato esperado:</strong><br>
-              • Tópicos: número + espaço + título (ex: "1 Introdução")<br>
-              • Subtópicos: número.subnúmero + espaço + título (ex: "1.1 Conceitos básicos")<br>
-              • Separe diferentes tópicos naturalmente no texto
+              • <strong>Tópicos:</strong> número + espaço + título (ex: "1 Introdução")<br>
+              • <strong>Subtópicos:</strong> número.subnúmero + espaço + título (ex: "1.1 Conceitos básicos")<br>
+              • <strong>Exemplo:</strong> "1 Tópico Principal 1.1 Primeiro Subtópico 1.2 Segundo Subtópico 2 Segundo Tópico"<br>
+              • O sistema reconhece automaticamente a hierarquia
             </div>
           </v-alert>
         </div>
