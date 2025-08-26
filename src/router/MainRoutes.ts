@@ -3,28 +3,33 @@ const MainRoutes = {
   meta: {
     requiresAuth: true
   },
-  redirect: '/main/dashboard',
+  redirect: '/main',
   component: () => import('@/layouts/dashboard/DashboardLayout.vue'),
   children: [
     {
       name: 'Dashboard',
-      path: '/',
+      path: '/main',
       component: () => import('@/views/study/DashboardPage.vue')
     },
     {
       name: 'Subjects',
-      path: '/subjects',
+      path: '/main/subjects',
       component: () => import('@/views/study/SubjectsPage.vue')
     },
     {
       name: 'Tasks',
-      path: '/tasks',
+      path: '/main/tasks',
       component: () => import('@/views/study/TasksPage.vue')
     },
     {
       name: 'StudySession',
-      path: '/study-session',
+      path: '/main/study-session',
       component: () => import('@/views/study/StudySessionPage.vue')
+    },
+    {
+      name: 'StarterPage',
+      path: '/main/starter',
+      component: () => import('@/views/StarterPage.vue')
     }
   ]
 };

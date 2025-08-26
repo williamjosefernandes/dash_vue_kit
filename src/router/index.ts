@@ -17,13 +17,13 @@ export const router = createRouter({
 });
 
 interface User {
-  // Define the properties and their types for the user data here
-  // For example:
   id: number;
-  name: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  token: string;
 }
 
-// Assuming you have a type/interface for your authentication store
 interface AuthStore {
   user: User | null;
   returnUrl: string | null;
@@ -32,22 +32,38 @@ interface AuthStore {
 }
 
 router.beforeEach(async (to, from, next) => {
-  // redirect to login page if not logged in and trying to access a restricted page
-  const publicPages = ['/'];
   const auth: AuthStore = useAuthStore();
-
+  
+  // Páginas públicas que não requerem autenticação
+  const publicPages = [
+    '/', 
+    '/login1', 
+    '/register1', 
+    '/forgot-pwd1', 
+    '/check-mail1', 
+    '/reset-pwd1', 
+    '/code-verify1',
+    '/comingsoon1',
+    '/comingsoon2', 
+    '/construction1',
+    '/construction2',
+    '/error'
+  ];
+  
   const isPublicPage = publicPages.includes(to.path);
-  const authRequired = !isPublicPage && to.matched.some((record) => record.meta.requiresAuth);
+  const authRequired = !isPublicPage;
 
-  // User not logged in and trying to access a restricted page
+  // Usuário não logado tentando acessar página restrita
   if (authRequired && !auth.user) {
-    auth.returnUrl = to.fullPath; // Save the intended page
-    next('/login');
-  } else if (auth.user && to.path === '/login') {
-    // User logged in and trying to access the login page
+    auth.returnUrl = to.fullPath;
+    next('/');
+  } 
+  // Usuário logado tentando acessar página de login
+  else if (auth.user && (to.path === '/' || to.path === '/login1')) {
     next('/main');
-  } else {
-    // All other scenarios, either public page or authorized access
+  } 
+  // Todos os outros cenários
+  else {
     next();
   }
 });
