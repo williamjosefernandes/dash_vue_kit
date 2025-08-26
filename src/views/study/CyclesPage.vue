@@ -129,10 +129,6 @@ const onSubjectDrop = (e: DragEvent, newStatus: 'to_study' | 'studying' | 'compl
     draggedSubject.value.id,
     { status: newStatus }
   );
-}
-  
-  dragOverStatus.value = null;
-};
 
 // Funções de gerenciamento
 const selectCycle = (cycle: StudyCycle) => {
