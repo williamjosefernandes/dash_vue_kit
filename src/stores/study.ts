@@ -8,8 +8,8 @@ export const useStudyStore = defineStore('study', {
     tasks: [] as Task[],
     studyPlans: [] as StudyPlan[],
     activeStudyPlan: null as StudyPlan | null,
-    studyCycles: [] as StudyCycle[],
-    activeCycle: null as StudyCycle | null,
+    studyCycles: [] as any[],
+    activeCycle: null as any,
     currentSession: null as StudySession | null,
     sessionTimer: 0,
     isStudying: false
@@ -253,136 +253,7 @@ export const useStudyStore = defineStore('study', {
       return Math.min((passedDays / totalDays) * 100, 100);
     },
 
-    getCycleStats: (state) => {
-      const totalCycles = state.studyCycles.length;
-      const activeCycles = state.studyCycles.filter(c => c.status === 'active').length;
-      const completedCycles = state.studyCycles.filter(c => c.status === 'completed').length;
-      const totalHours = state.studyCycles.reduce((total, cycle) => total + cycle.totalHours, 0);
-      const completedHours = state.studyCycles.reduce((total, cycle) => total + cycle.completedHours, 0);
-      const averageCompletion = totalHours > 0 ? (completedHours / totalHours) * 100 : 0;
 
-      return {
-        totalCycles,
-        activeCycles,
-        completedCycles,
-        totalHours,
-        completedHours,
-        averageCompletion
-      };
-    },
-
-    getCycleById: (state) => (id: string) => {
-      return state.studyCycles.find(cycle => cycle.id === id);
-    },
-
-    getActiveCycles: (state) => {
-      return state.studyCycles.filter(cycle => cycle.status === 'active');
-    },
-
-    getCycleProgress: (state) => (cycleId: string) => {
-      const cycle = state.studyCycles.find(c => c.id === cycleId);
-      if (!cycle) return 0;
-      
-      return cycle.totalHours > 0 ? (cycle.completedHours / cycle.totalHours) * 100 : 0;
-    },
-
-    // Study Cycles
-    addStudyCycle(cycle: Omit<StudyCycle, 'id' | 'createdAt' | 'updatedAt'>) {
-      const newCycle: StudyCycle = {
-        ...cycle,
-        id: Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.studyCycles.push(newCycle);
-      this.saveToLocalStorage();
-    },
-
-    updateStudyCycle(id: string, updates: Partial<StudyCycle>) {
-      const index = this.studyCycles.findIndex(cycle => cycle.id === id);
-      if (index !== -1) {
-        this.studyCycles[index] = {
-          ...this.studyCycles[index],
-          ...updates,
-          updatedAt: new Date()
-        };
-        this.saveToLocalStorage();
-      }
-    },
-
-    deleteStudyCycle(id: string) {
-      this.studyCycles = this.studyCycles.filter(cycle => cycle.id !== id);
-      if (this.activeCycle?.id === id) {
-        this.activeCycle = null;
-      }
-      this.saveToLocalStorage();
-    },
-
-    setActiveCycle(cycleId: string) {
-      const cycle = this.studyCycles.find(c => c.id === cycleId);
-      if (cycle) {
-        this.activeCycle = cycle;
-        this.saveToLocalStorage();
-      }
-    },
-
-    addCycleTask(cycleId: string, task: Omit<CycleTask, 'id' | 'cycleId'>) {
-      const cycle = this.studyCycles.find(c => c.id === cycleId);
-      if (cycle) {
-        const newTask: CycleTask = {
-          ...task,
-          id: Date.now().toString(),
-          cycleId
-        };
-        cycle.tasks.push(newTask);
-        this.saveToLocalStorage();
-      }
-    },
-
-    updateCycleTask(cycleId: string, taskId: string, updates: Partial<CycleTask>) {
-      const cycle = this.studyCycles.find(c => c.id === cycleId);
-      if (cycle) {
-        const taskIndex = cycle.tasks.findIndex(t => t.id === taskId);
-        if (taskIndex !== -1) {
-          cycle.tasks[taskIndex] = { ...cycle.tasks[taskIndex], ...updates };
-          
-          // Atualizar horas completadas do ciclo
-          cycle.completedHours = cycle.tasks
-            .filter(t => t.status === 'done')
-            .reduce((total, t) => total + t.actualHours, 0);
-          
-          this.saveToLocalStorage();
-        }
-      }
-    },
-
-    deleteCycleTask(cycleId: string, taskId: string) {
-      const cycle = this.studyCycles.find(c => c.id === cycleId);
-      if (cycle) {
-        cycle.tasks = cycle.tasks.filter(t => t.id !== taskId);
-        this.saveToLocalStorage();
-      }
-    },
-
-    moveCycleTask(cycleId: string, taskId: string, newStatus: CycleTask['status']) {
-      const cycle = this.studyCycles.find(c => c.id === cycleId);
-      if (cycle) {
-        const task = cycle.tasks.find(t => t.id === taskId);
-        if (task) {
-          task.status = newStatus;
-          if (newStatus === 'done' && !task.completedDate) {
-            task.completedDate = new Date();
-          }
-          
-          // Atualizar horas completadas do ciclo
-          cycle.completedHours = cycle.tasks
-            .filter(t => t.status === 'done')
-            .reduce((total, t) => total + t.actualHours, 0);
-          
-          this.saveToLocalStorage();
-        }
-      }
-    },
 
     // Local Storage
     saveToLocalStorage() {
@@ -392,8 +263,6 @@ export const useStudyStore = defineStore('study', {
         tasks: this.tasks,
         studyPlans: this.studyPlans,
         activeStudyPlan: this.activeStudyPlan,
-        studyCycles: this.studyCycles,
-        activeCycle: this.activeCycle
       }));
     },
 
@@ -425,23 +294,6 @@ export const useStudyStore = defineStore('study', {
           updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : new Date()
         }));
         this.activeStudyPlan = parsed.activeStudyPlan || null;
-        this.studyCycles = (parsed.studyCycles || []).map((cycle: any) => ({
-          ...cycle,
-          totalHours: cycle.totalHours || 0,
-          completedHours: cycle.completedHours || 0,
-          startDate: cycle.startDate ? new Date(cycle.startDate) : new Date(),
-          endDate: cycle.endDate ? new Date(cycle.endDate) : new Date(),
-          createdAt: cycle.createdAt ? new Date(cycle.createdAt) : new Date(),
-          updatedAt: cycle.updatedAt ? new Date(cycle.updatedAt) : new Date(),
-          tasks: (cycle.tasks || []).map((task: any) => ({
-            ...task,
-            estimatedHours: task.estimatedHours || 0,
-            actualHours: task.actualHours || 0,
-            assignedDate: task.assignedDate ? new Date(task.assignedDate) : new Date(),
-            completedDate: task.completedDate ? new Date(task.completedDate) : null
-          }))
-        }));
-        this.activeCycle = parsed.activeCycle || null;
       }
     }
   }

@@ -33,11 +33,6 @@ const sidebarItem: menu[] = [
     to: '/main/plans'
   },
   {
-    title: 'Ciclos de Estudo',
-    icon: 'custom-refresh',
-    to: '/main/cycles'
-  },
-  {
     title: 'Tarefas',
     icon: 'custom-check',
     to: '/main/tasks'

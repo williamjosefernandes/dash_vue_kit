@@ -70,48 +70,6 @@ export interface StudyPlan {
   updatedAt: Date;
 }
 
-export interface StudyCycle {
-  id: string;
-  name: string;
-  description: string;
-  planId: string;
-  startDate: Date;
-  endDate: Date;
-  status: 'planning' | 'active' | 'completed' | 'cancelled';
-  goals: string[];
-  tasks: CycleTask[];
-  totalHours: number;
-  completedHours: number;
-  color: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CycleTask {
-  id: string;
-  cycleId: string;
-  subjectId: string;
-  title: string;
-  description?: string;
-  estimatedHours: number;
-  actualHours: number;
-  status: 'todo' | 'in-progress' | 'review' | 'done';
-  priority: 'low' | 'medium' | 'high';
-  assignedDate?: Date;
-  completedDate?: Date;
-  notes?: string;
-  order: number;
-}
-
-export interface CycleStats {
-  totalCycles: number;
-  activeCycles: number;
-  completedCycles: number;
-  totalHours: number;
-  completedHours: number;
-  averageCompletion: number;
-}
-
 export interface PlanSession {
   id: string;
   planId: string;
