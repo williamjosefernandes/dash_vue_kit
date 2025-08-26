@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { Subject, StudySession, Task, StudyPlan, StudyStats } from '@/types/study';
+import type { Subject, StudySession, Task, StudyPlan, StudyStats, StudyCycle, CycleSubject, StudyTimer } from '@/types/study';
 
 export const useStudyStore = defineStore('study', {
   state: () => ({
@@ -8,8 +8,14 @@ export const useStudyStore = defineStore('study', {
     tasks: [] as Task[],
     studyPlans: [] as StudyPlan[],
     activeStudyPlan: null as StudyPlan | null,
-    studyCycles: [] as any[],
-    activeCycle: null as any,
+    studyCycles: [] as StudyCycle[],
+    activeCycle: null as StudyCycle | null,
+    studyTimer: {
+      isActive: false,
+      pausedTime: 0,
+      totalTime: 0,
+      currentSubject: null
+    } as StudyTimer,
     currentSession: null as StudySession | null,
     sessionTimer: 0,
     isStudying: false
@@ -235,6 +241,142 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
+    // Study Cycles
+    addStudyCycle(cycle: Omit<StudyCycle, 'id' | 'createdAt' | 'updatedAt'>) {
+      const newCycle: StudyCycle = {
+        ...cycle,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.studyCycles.push(newCycle);
+      this.saveToLocalStorage();
+    },
+
+    updateStudyCycle(id: string, updates: Partial<StudyCycle>) {
+      const index = this.studyCycles.findIndex(cycle => cycle.id === id);
+      if (index !== -1) {
+        this.studyCycles[index] = {
+          ...this.studyCycles[index],
+          ...updates,
+          updatedAt: new Date()
+        };
+        if (this.activeCycle?.id === id) {
+          this.activeCycle = this.studyCycles[index];
+        }
+        this.saveToLocalStorage();
+      }
+    },
+
+    setActiveCycle(cycleId: string) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        // Desativar ciclo anterior
+        if (this.activeCycle) {
+          this.updateStudyCycle(this.activeCycle.id, { status: 'paused' });
+        }
+        // Ativar novo ciclo
+        this.activeCycle = cycle;
+        this.updateStudyCycle(cycleId, { status: 'active' });
+      }
+    },
+
+    updateCycleSubject(cycleId: string, subjectId: string, updates: Partial<CycleSubject>) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        const subjectIndex = cycle.subjects.findIndex(s => s.id === subjectId);
+        if (subjectIndex !== -1) {
+          cycle.subjects[subjectIndex] = { ...cycle.subjects[subjectIndex], ...updates };
+          this.updateStudyCycle(cycleId, { subjects: cycle.subjects });
+        }
+      }
+    },
+
+    moveSubjectToStatus(subjectId: string, newStatus: 'to_study' | 'studying' | 'review' | 'completed') {
+      if (!this.activeCycle) return;
+      
+      const subject = this.activeCycle.subjects.find(s => s.id === subjectId);
+      if (subject) {
+        // Se movendo para "studying", pausar timer atual se houver
+        if (newStatus === 'studying' && this.studyTimer.currentSubject && this.studyTimer.currentSubject.id !== subjectId) {
+          this.pauseTimer();
+        }
+        
+        // Se movendo para "completed", definir data de conclusão
+        if (newStatus === 'completed') {
+          subject.completedAt = new Date();
+          // Definir próxima revisão
+          const reviewDate = new Date();
+          reviewDate.setHours(reviewDate.getHours() + 24);
+          subject.reviewDate = reviewDate;
+          subject.reviewType = '24h';
+        }
+        
+        this.updateCycleSubject(this.activeCycle.id, subjectId, { 
+          status: newStatus,
+          ...(newStatus === 'completed' && { completedAt: new Date() })
+        });
+      }
+    },
+
+    // Study Timer
+    startTimer(subject: CycleSubject) {
+      this.studyTimer = {
+        isActive: true,
+        startTime: new Date(),
+        pausedTime: 0,
+        totalTime: 0,
+        currentSubject: subject
+      };
+      this.moveSubjectToStatus(subject.id, 'studying');
+    },
+
+    pauseTimer() {
+      if (this.studyTimer.isActive && this.studyTimer.startTime) {
+        const now = new Date();
+        this.studyTimer.totalTime += now.getTime() - this.studyTimer.startTime.getTime();
+        this.studyTimer.isActive = false;
+        this.studyTimer.startTime = undefined;
+      }
+    },
+
+    resumeTimer() {
+      if (!this.studyTimer.isActive && this.studyTimer.currentSubject) {
+        this.studyTimer.isActive = true;
+        this.studyTimer.startTime = new Date();
+      }
+    },
+
+    stopTimer() {
+      if (this.studyTimer.currentSubject) {
+        const totalMinutes = Math.round(this.studyTimer.totalTime / (1000 * 60));
+        this.updateCycleSubject(
+          this.activeCycle!.id, 
+          this.studyTimer.currentSubject.id, 
+          { actualMinutes: totalMinutes }
+        );
+        this.moveSubjectToStatus(this.studyTimer.currentSubject.id, 'completed');
+      }
+      
+      this.studyTimer = {
+        isActive: false,
+        pausedTime: 0,
+        totalTime: 0,
+        currentSubject: null
+      };
+    },
+
+    getCurrentTimerTime() {
+      if (!this.studyTimer.currentSubject) return 0;
+      
+      let totalTime = this.studyTimer.totalTime;
+      if (this.studyTimer.isActive && this.studyTimer.startTime) {
+        totalTime += new Date().getTime() - this.studyTimer.startTime.getTime();
+      }
+      
+      return Math.round(totalTime / 1000); // retorna em segundos
+    },
+
     getStudyPlanById: (state) => (id: string) => {
       return state.studyPlans.find(plan => plan.id === id);
     },
@@ -253,6 +395,36 @@ export const useStudyStore = defineStore('study', {
       return Math.min((passedDays / totalDays) * 100, 100);
     },
 
+    getActiveCycle: (state) => {
+      return state.studyCycles.find(cycle => cycle.status === 'active') || null;
+    },
+
+    getCycleSubjectsByStatus: (state) => (status: string) => {
+      if (!state.activeCycle) return [];
+      return state.activeCycle.subjects.filter(subject => subject.status === status);
+    },
+
+    getWeeklyProgress: (state) => {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      
+      const weeklyHours = state.studySessions
+        .filter(session => session.completed && session.date >= weekStart)
+        .reduce((total, session) => total + session.duration / 60, 0);
+      
+      const weeklyGoal = state.activeCycle?.weeklyGoal || 40;
+      return Math.min((weeklyHours / weeklyGoal) * 100, 100);
+    },
+
+    getDaysUntilExam: (state) => {
+      if (!state.activeCycle) return 0;
+      const now = new Date();
+      const examDate = new Date(state.activeCycle.examDate);
+      const diffTime = examDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? diffDays : 0;
+    }
+
 
 
     // Local Storage
@@ -263,6 +435,9 @@ export const useStudyStore = defineStore('study', {
         tasks: this.tasks,
         studyPlans: this.studyPlans,
         activeStudyPlan: this.activeStudyPlan,
+        studyCycles: this.studyCycles,
+        activeCycle: this.activeCycle,
+        studyTimer: this.studyTimer
       }));
     },
 
@@ -294,6 +469,34 @@ export const useStudyStore = defineStore('study', {
           updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : new Date()
         }));
         this.activeStudyPlan = parsed.activeStudyPlan || null;
+        this.studyCycles = (parsed.studyCycles || []).map((cycle: any) => ({
+          ...cycle,
+          examDate: cycle.examDate ? new Date(cycle.examDate) : new Date(),
+          createdAt: cycle.createdAt ? new Date(cycle.createdAt) : new Date(),
+          updatedAt: cycle.updatedAt ? new Date(cycle.updatedAt) : new Date(),
+          subjects: (cycle.subjects || []).map((subject: any) => ({
+            ...subject,
+            reviewDate: subject.reviewDate ? new Date(subject.reviewDate) : undefined,
+            completedAt: subject.completedAt ? new Date(subject.completedAt) : undefined
+          }))
+        }));
+        this.activeCycle = parsed.activeCycle ? {
+          ...parsed.activeCycle,
+          examDate: parsed.activeCycle.examDate ? new Date(parsed.activeCycle.examDate) : new Date(),
+          createdAt: parsed.activeCycle.createdAt ? new Date(parsed.activeCycle.createdAt) : new Date(),
+          updatedAt: parsed.activeCycle.updatedAt ? new Date(parsed.activeCycle.updatedAt) : new Date(),
+          subjects: (parsed.activeCycle.subjects || []).map((subject: any) => ({
+            ...subject,
+            reviewDate: subject.reviewDate ? new Date(subject.reviewDate) : undefined,
+            completedAt: subject.completedAt ? new Date(subject.completedAt) : undefined
+          }))
+        } : null;
+        this.studyTimer = parsed.studyTimer || {
+          isActive: false,
+          pausedTime: 0,
+          totalTime: 0,
+          currentSubject: null
+        };
       }
     }
   }
