@@ -131,6 +131,7 @@ const onSubjectDrop = (e: DragEvent, newStatus: 'to_study' | 'studying' | 'compl
   );
 
 // Funções de gerenciamento
+};
 const selectCycle = (cycle: StudyCycle) => {
   selectedCycle.value = cycle;
   viewMode.value = 'kanban';
