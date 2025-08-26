@@ -1466,4 +1466,3 @@ onMounted(() => {
   }
 }
 </style>
-</v-card-text>
