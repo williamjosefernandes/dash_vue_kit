@@ -714,3 +714,8 @@ export const useStudyStore = defineStore('study', {
         isActive: true,
         startTime: new Date(),
         pausedTime: 0,
+      }
+    }
+  }
+}
+)
