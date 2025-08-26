@@ -28,6 +28,11 @@ const sidebarItem: menu[] = [
     to: '/main/subjects'
   },
   {
+    title: 'Planos',
+    icon: 'custom-calendar',
+    to: '/main/plans'
+  },
+  {
     title: 'Tarefas',
     icon: 'custom-check',
     to: '/main/tasks'
