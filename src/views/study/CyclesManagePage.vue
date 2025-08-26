@@ -4,7 +4,7 @@ import { useStudyStore } from '@/stores/study';
 import BaseBreadcrumb from '@/components/shared/BaseBreadcrumb.vue';
 import UiParentCard from '@/components/shared/UiParentCard.vue';
 import SvgSprite from '@/components/shared/SvgSprite.vue';
-import type { StudyCycle } from '@/types/study';
+import type { StudyCycle, CycleSubject } from '@/types/study';
 
 const studyStore = useStudyStore();
 const page = ref({ title: 'Gerenciar Ciclos' });
@@ -18,8 +18,14 @@ const breadcrumbs = ref([
 const editDialog = ref(false);
 const deleteDialog = ref(false);
 const viewDialog = ref(false);
+const topicsDialog = ref(false);
 const currentCycle = ref<StudyCycle | null>(null);
 const cycleToDelete = ref<StudyCycle | null>(null);
+const selectedCycleForTopics = ref<StudyCycle | null>(null);
+
+// Estados de drag and drop
+const draggedSubject = ref<CycleSubject | null>(null);
+const dragOverCycle = ref<string | null>(null);
 
 // Form para editar ciclo
 const form = ref();
@@ -36,6 +42,7 @@ const editForm = ref({
 // Filtros e ordenação
 const statusFilter = ref('all');
 const sortBy = ref('examDate');
+const viewMode = ref<'cards' | 'detailed'>('cards');
 
 const rules = {
   required: (v: string) => !!v || 'Campo obrigatório',
@@ -120,8 +127,43 @@ const formatDate = (date: Date) => {
   return new Date(date).toLocaleDateString('pt-BR');
 };
 
+const formatMinutes = (minutes: number) => {
+  if (minutes < 60) return `${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+};
+
+const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case 'high': return 'error';
+    case 'medium': return 'warning';
+    case 'low': return 'success';
+    default: return 'primary';
+  }
+};
+
+const getPriorityText = (priority: string) => {
+  switch (priority) {
+    case 'high': return 'Alta';
+    case 'medium': return 'Média';
+    case 'low': return 'Baixa';
+    default: return priority;
+  }
+};
+
+const getSubjectTopics = (subjectId: string) => {
+  const subject = studyStore.getSubjectById(subjectId);
+  return subject?.topics || [];
+};
+
+const getTotalSubtopics = (subjectId: string) => {
+  const topics = getSubjectTopics(subjectId);
+  return topics.reduce((total, topic) => total + topic.subtopics.length, 0);
+};
+
+// Dialog methods
 const openEditDialog = (cycle: StudyCycle) => {
-  editMode.value = true;
   currentCycle.value = cycle;
   editForm.value = {
     name: cycle.name,
@@ -142,6 +184,11 @@ const openViewDialog = (cycle: StudyCycle) => {
 const openDeleteDialog = (cycle: StudyCycle) => {
   cycleToDelete.value = cycle;
   deleteDialog.value = true;
+};
+
+const openTopicsDialog = (cycle: StudyCycle) => {
+  selectedCycleForTopics.value = cycle;
+  topicsDialog.value = true;
 };
 
 const saveCycle = () => {
@@ -206,6 +253,68 @@ const duplicateCycle = (cycle: StudyCycle) => {
   studyStore.addStudyCycle(newCycle);
 };
 
+// Drag and Drop methods
+const onDragStart = (event: DragEvent, subject: CycleSubject, sourceCycleId: string) => {
+  draggedSubject.value = { ...subject, sourceCycleId };
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', JSON.stringify({ subject, sourceCycleId }));
+  }
+};
+
+const onDragOver = (event: DragEvent, targetCycleId: string) => {
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+  dragOverCycle.value = targetCycleId;
+};
+
+const onDragLeave = () => {
+  dragOverCycle.value = null;
+};
+
+const onDrop = (event: DragEvent, targetCycleId: string) => {
+  event.preventDefault();
+  dragOverCycle.value = null;
+  
+  if (!draggedSubject.value) return;
+  
+  const sourceCycleId = (draggedSubject.value as any).sourceCycleId;
+  
+  // Não fazer nada se for o mesmo ciclo
+  if (sourceCycleId === targetCycleId) {
+    draggedSubject.value = null;
+    return;
+  }
+  
+  // Remover do ciclo origem
+  const sourceCycle = studyStore.studyCycles.find(c => c.id === sourceCycleId);
+  if (sourceCycle) {
+    sourceCycle.subjects = sourceCycle.subjects.filter(s => s.id !== draggedSubject.value!.id);
+    studyStore.updateStudyCycle(sourceCycleId, { subjects: sourceCycle.subjects });
+  }
+  
+  // Adicionar ao ciclo destino
+  const targetCycle = studyStore.studyCycles.find(c => c.id === targetCycleId);
+  if (targetCycle) {
+    const newSubject = {
+      ...draggedSubject.value,
+      status: 'to_study' as const,
+      actualMinutes: 0,
+      completedAt: undefined,
+      reviewDate: undefined,
+      reviewType: undefined
+    };
+    delete (newSubject as any).sourceCycleId;
+    
+    targetCycle.subjects = [...(targetCycle.subjects || []), newSubject];
+    studyStore.updateStudyCycle(targetCycleId, { subjects: targetCycle.subjects });
+  }
+  
+  draggedSubject.value = null;
+};
+
 onMounted(() => {
   studyStore.loadFromLocalStorage();
 });
@@ -265,10 +374,19 @@ onMounted(() => {
     </v-col>
   </v-row>
 
-  <!-- Filtros e Controles -->
+  <!-- Controles -->
   <UiParentCard title="Lista de Ciclos">
     <template v-slot:action>
-      <div class="d-flex gap-2 align-center">
+      <div class="d-flex gap-2 align-center flex-wrap">
+        <v-btn-toggle v-model="viewMode" mandatory variant="outlined" density="compact">
+          <v-btn value="cards" size="small">
+            <SvgSprite name="custom-grid" style="width: 16px; height: 16px" />
+          </v-btn>
+          <v-btn value="detailed" size="small">
+            <SvgSprite name="custom-list" style="width: 16px; height: 16px" />
+          </v-btn>
+        </v-btn-toggle>
+        
         <v-select
           v-model="statusFilter"
           :items="[
@@ -278,10 +396,10 @@ onMounted(() => {
             { title: 'Pausados', value: 'paused' },
             { title: 'Concluídos', value: 'completed' }
           ]"
-          label="Filtrar por status"
+          label="Status"
           variant="outlined"
           density="compact"
-          style="min-width: 150px"
+          style="min-width: 120px"
           hide-details
         />
         
@@ -290,28 +408,219 @@ onMounted(() => {
           :items="[
             { title: 'Data da Prova', value: 'examDate' },
             { title: 'Nome', value: 'name' },
-            { title: 'Data de Criação', value: 'created' }
+            { title: 'Criação', value: 'created' }
           ]"
-          label="Ordenar por"
+          label="Ordenar"
           variant="outlined"
           density="compact"
-          style="min-width: 150px"
+          style="min-width: 120px"
           hide-details
         />
+        
+        <v-btn color="primary" prepend-icon="mdi-plus">
+          <router-link to="/main/cycles/new" class="text-decoration-none text-white">
+            Novo Ciclo
+          </router-link>
+        </v-btn>
       </div>
     </template>
 
-    <!-- Lista de Ciclos -->
-    <div v-if="filteredCycles.length > 0" class="cycles-list">
+    <!-- Visualização em Cards -->
+    <div v-if="viewMode === 'cards' && filteredCycles.length > 0">
+      <v-row>
+        <v-col 
+          v-for="cycle in filteredCycles" 
+          :key="cycle.id"
+          cols="12" 
+          md="6" 
+          lg="4"
+        >
+          <v-card 
+            class="cycle-card h-100"
+            :class="{ 
+              'active-cycle': cycle.status === 'active',
+              'drag-over': dragOverCycle === cycle.id 
+            }"
+            variant="outlined"
+            @dragover="onDragOver($event, cycle.id)"
+            @dragleave="onDragLeave"
+            @drop="onDrop($event, cycle.id)"
+          >
+            <v-card-text class="pa-4">
+              <div class="d-flex justify-space-between align-center mb-3">
+                <v-chip 
+                  :color="getStatusColor(cycle.status)" 
+                  size="small" 
+                  variant="tonal"
+                >
+                  {{ getStatusText(cycle.status) }}
+                </v-chip>
+                
+                <v-menu>
+                  <template v-slot:activator="{ props }">
+                    <v-btn icon size="small" variant="text" v-bind="props">
+                      <SvgSprite name="custom-more" style="width: 16px; height: 16px" />
+                    </v-btn>
+                  </template>
+                  <v-list>
+                    <v-list-item @click="openViewDialog(cycle)">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-eye" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Visualizar</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="openTopicsDialog(cycle)">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-list" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Ver Tópicos</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="openEditDialog(cycle)">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-edit" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Editar</v-list-item-title>
+                    </v-list-item>
+                    <v-divider />
+                    <v-list-item @click="duplicateCycle(cycle)">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-copy" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Duplicar</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="openDeleteDialog(cycle)" class="text-error">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-trash" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Excluir</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </div>
+              
+              <div class="d-flex align-center mb-3">
+                <v-avatar :color="getStatusColor(cycle.status)" size="40" class="me-3">
+                  <SvgSprite name="custom-refresh" style="width: 20px; height: 20px" />
+                </v-avatar>
+                <div>
+                  <h6 class="text-h6 mb-1">{{ cycle.name }}</h6>
+                  <p class="text-caption text-lightText mb-0">
+                    {{ formatDate(cycle.examDate) }} • {{ getDaysUntilExam(cycle.examDate) }} dias
+                  </p>
+                </div>
+              </div>
+              
+              <p class="text-caption text-lightText mb-3">{{ cycle.description || 'Sem descrição' }}</p>
+              
+              <!-- Progresso -->
+              <div class="mb-3">
+                <div class="d-flex justify-space-between mb-1">
+                  <span class="text-caption">Progresso</span>
+                  <span class="text-caption">{{ getCycleProgress(cycle) }}%</span>
+                </div>
+                <v-progress-linear
+                  :model-value="getCycleProgress(cycle)"
+                  :color="getStatusColor(cycle.status)"
+                  height="6"
+                  rounded
+                />
+              </div>
+              
+              <!-- Disciplinas -->
+              <div class="subjects-preview">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <span class="text-caption font-weight-medium">Disciplinas</span>
+                  <v-chip size="x-small" color="info" variant="tonal">
+                    {{ (cycle.subjects || []).length }}
+                  </v-chip>
+                </div>
+                
+                <div class="subjects-grid">
+                  <div
+                    v-for="subject in (cycle.subjects || []).slice(0, 3)"
+                    :key="subject.id"
+                    class="subject-chip"
+                    :draggable="cycle.status !== 'completed'"
+                    @dragstart="onDragStart($event, subject, cycle.id)"
+                  >
+                    <v-chip 
+                      size="x-small" 
+                      :color="subject.color" 
+                      variant="tonal"
+                      :class="{ 'draggable-chip': cycle.status !== 'completed' }"
+                    >
+                      {{ subject.name }}
+                    </v-chip>
+                  </div>
+                  
+                  <v-chip 
+                    v-if="(cycle.subjects || []).length > 3"
+                    size="x-small" 
+                    color="grey" 
+                    variant="tonal"
+                  >
+                    +{{ (cycle.subjects || []).length - 3 }}
+                  </v-chip>
+                </div>
+              </div>
+              
+              <!-- Ações Rápidas -->
+              <div class="d-flex gap-2 mt-4">
+                <v-btn
+                  v-if="cycle.status === 'draft' || cycle.status === 'paused'"
+                  size="small"
+                  color="success"
+                  variant="tonal"
+                  @click="activateCycle(cycle.id)"
+                  block
+                >
+                  Ativar
+                </v-btn>
+                
+                <v-btn
+                  v-if="cycle.status === 'active'"
+                  size="small"
+                  color="warning"
+                  variant="tonal"
+                  @click="pauseCycle(cycle.id)"
+                  block
+                >
+                  Pausar
+                </v-btn>
+                
+                <v-btn
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                  @click="openTopicsDialog(cycle)"
+                  block
+                >
+                  Ver Tópicos
+                </v-btn>
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
+
+    <!-- Visualização Detalhada -->
+    <div v-else-if="viewMode === 'detailed' && filteredCycles.length > 0" class="detailed-view">
       <v-card
         v-for="cycle in filteredCycles"
         :key="cycle.id"
-        class="mb-4 cycle-card"
-        :class="{ 'active-cycle': cycle.status === 'active' }"
+        class="mb-4 cycle-detailed-card"
+        :class="{ 
+          'active-cycle': cycle.status === 'active',
+          'drag-over': dragOverCycle === cycle.id 
+        }"
         variant="outlined"
+        @dragover="onDragOver($event, cycle.id)"
+        @dragleave="onDragLeave"
+        @drop="onDrop($event, cycle.id)"
       >
         <v-card-text class="pa-6">
-          <div class="d-flex align-start justify-space-between">
+          <div class="d-flex align-start justify-space-between mb-4">
             <!-- Informações Principais -->
             <div class="flex-grow-1">
               <div class="d-flex align-center mb-3">
@@ -413,18 +722,61 @@ onMounted(() => {
                 </v-col>
               </v-row>
               
-              <!-- Progresso Visual -->
-              <div class="mb-3">
-                <div class="d-flex justify-space-between mb-1">
-                  <span class="text-caption">Progresso Geral</span>
-                  <span class="text-caption">{{ getCycleProgress(cycle) }}%</span>
+              <!-- Disciplinas com Drag & Drop -->
+              <div v-if="(cycle.subjects || []).length > 0" class="subjects-section">
+                <h6 class="text-h6 mb-3">Disciplinas do Ciclo:</h6>
+                <div class="subjects-detailed-grid">
+                  <div
+                    v-for="subject in (cycle.subjects || [])"
+                    :key="subject.id"
+                    class="subject-detailed-card"
+                    :draggable="cycle.status !== 'completed'"
+                    @dragstart="onDragStart($event, subject, cycle.id)"
+                  >
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <div class="d-flex align-center">
+                        <v-avatar :color="subject.color" size="24" class="me-2">
+                          <SvgSprite name="custom-book" style="width: 12px; height: 12px" />
+                        </v-avatar>
+                        <h6 class="text-subtitle-2 mb-0">{{ subject.name }}</h6>
+                      </div>
+                      
+                      <div class="d-flex align-center gap-1">
+                        <v-chip 
+                          size="x-small" 
+                          :color="getPriorityColor(subject.priority)" 
+                          variant="tonal"
+                        >
+                          {{ getPriorityText(subject.priority) }}
+                        </v-chip>
+                        
+                        <v-chip 
+                          size="x-small" 
+                          :color="subject.status === 'completed' ? 'success' : 
+                                  subject.status === 'studying' ? 'primary' : 'secondary'" 
+                          variant="tonal"
+                        >
+                          {{ subject.status === 'completed' ? 'Concluído' :
+                             subject.status === 'studying' ? 'Estudando' :
+                             subject.status === 'to_study' ? 'A Estudar' : subject.status }}
+                        </v-chip>
+                      </div>
+                    </div>
+                    
+                    <div class="d-flex justify-space-between align-center">
+                      <div class="text-caption text-lightText">
+                        {{ getSubjectTopics(subject.subjectId).length }} tópicos • 
+                        {{ getTotalSubtopics(subject.subjectId) }} subtópicos
+                      </div>
+                      <div class="text-caption">{{ formatMinutes(subject.estimatedMinutes) }}</div>
+                    </div>
+                    
+                    <!-- Indicador de drag -->
+                    <div v-if="cycle.status !== 'completed'" class="drag-indicator">
+                      <SvgSprite name="custom-move" style="width: 12px; height: 12px; opacity: 0.5" />
+                    </div>
+                  </div>
                 </div>
-                <v-progress-linear
-                  :model-value="getCycleProgress(cycle)"
-                  :color="getStatusColor(cycle.status)"
-                  height="8"
-                  rounded
-                />
               </div>
             </div>
             
@@ -444,81 +796,29 @@ onMounted(() => {
                 size="small"
                 color="primary"
                 variant="tonal"
+                @click="openTopicsDialog(cycle)"
+                prepend-icon="mdi-format-list-bulleted"
+              >
+                Tópicos
+              </v-btn>
+              
+              <v-btn
+                size="small"
+                color="secondary"
+                variant="tonal"
                 @click="openEditDialog(cycle)"
                 prepend-icon="mdi-pencil"
               >
                 Editar
               </v-btn>
-              
-              <v-btn
-                v-if="cycle.status !== 'active'"
-                size="small"
-                color="success"
-                variant="tonal"
-                @click="activateCycle(cycle.id)"
-                prepend-icon="mdi-play"
-              >
-                Ativar
-              </v-btn>
-              
-              <v-btn
-                v-if="cycle.status === 'active'"
-                size="small"
-                color="warning"
-                variant="tonal"
-                @click="pauseCycle(cycle.id)"
-                prepend-icon="mdi-pause"
-              >
-                Pausar
-              </v-btn>
-              
-              <v-menu>
-                <template v-slot:activator="{ props }">
-                  <v-btn
-                    size="small"
-                    variant="text"
-                    icon
-                    v-bind="props"
-                  >
-                    <SvgSprite name="custom-more" style="width: 16px; height: 16px" />
-                  </v-btn>
-                </template>
-                <v-list>
-                  <v-list-item @click="duplicateCycle(cycle)">
-                    <template v-slot:prepend>
-                      <SvgSprite name="custom-copy" style="width: 16px; height: 16px" />
-                    </template>
-                    <v-list-item-title>Duplicar</v-list-item-title>
-                  </v-list-item>
-                  
-                  <v-list-item 
-                    v-if="cycle.status !== 'completed'"
-                    @click="completeCycle(cycle.id)"
-                  >
-                    <template v-slot:prepend>
-                      <SvgSprite name="custom-check" style="width: 16px; height: 16px" />
-                    </template>
-                    <v-list-item-title>Marcar como Concluído</v-list-item-title>
-                  </v-list-item>
-                  
-                  <v-divider />
-                  
-                  <v-list-item @click="openDeleteDialog(cycle)" class="text-error">
-                    <template v-slot:prepend>
-                      <SvgSprite name="custom-trash" style="width: 16px; height: 16px" />
-                    </template>
-                    <v-list-item-title>Excluir</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
             </div>
           </div>
         </v-card-text>
       </v-card>
     </div>
-    
+
     <!-- Estado Vazio -->
-    <div v-else class="text-center py-12">
+    <div v-else-if="filteredCycles.length === 0" class="text-center py-12">
       <SvgSprite name="custom-refresh" style="width: 64px; height: 64px; opacity: 0.3" />
       <h5 class="text-h5 mt-4 mb-2">
         {{ statusFilter === 'all' ? 'Nenhum ciclo criado' : `Nenhum ciclo ${getStatusText(statusFilter).toLowerCase()}` }}
@@ -539,6 +839,151 @@ onMounted(() => {
       </v-btn>
     </div>
   </UiParentCard>
+
+  <!-- Dialog para Visualizar Tópicos -->
+  <v-dialog v-model="topicsDialog" max-width="900px">
+    <v-card v-if="selectedCycleForTopics" class="dialog-card">
+      <v-card-title class="dialog-header">
+        <div class="d-flex align-center">
+          <v-avatar color="info" size="32" class="me-3">
+            <SvgSprite name="custom-list" style="width: 16px; height: 16px" />
+          </v-avatar>
+          <div>
+            <span>Tópicos e Subtópicos</span>
+            <v-chip size="small" color="info" variant="tonal" class="ml-2">
+              {{ selectedCycleForTopics.name }}
+            </v-chip>
+          </div>
+        </div>
+      </v-card-title>
+      
+      <v-card-text class="pa-6">
+        <div v-if="(selectedCycleForTopics.subjects || []).length > 0">
+          <v-expansion-panels variant="accordion" multiple>
+            <v-expansion-panel
+              v-for="subject in (selectedCycleForTopics.subjects || [])"
+              :key="subject.id"
+              class="mb-3"
+            >
+              <v-expansion-panel-title>
+                <div class="d-flex align-center justify-space-between w-100">
+                  <div class="d-flex align-center">
+                    <v-avatar :color="subject.color" size="32" class="me-3">
+                      <SvgSprite name="custom-book" style="width: 16px; height: 16px" />
+                    </v-avatar>
+                    <div>
+                      <h6 class="text-h6 mb-1">{{ subject.name }}</h6>
+                      <div class="d-flex align-center gap-2">
+                        <v-chip size="x-small" :color="subject.color" variant="tonal">
+                          {{ getSubjectTopics(subject.subjectId).length }} tópicos
+                        </v-chip>
+                        <v-chip size="x-small" color="info" variant="tonal">
+                          {{ getTotalSubtopics(subject.subjectId) }} subtópicos
+                        </v-chip>
+                        <v-chip size="x-small" color="warning" variant="tonal">
+                          {{ formatMinutes(subject.estimatedMinutes) }}
+                        </v-chip>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <v-chip 
+                    size="small" 
+                    :color="getPriorityColor(subject.priority)" 
+                    variant="tonal"
+                  >
+                    {{ getPriorityText(subject.priority) }}
+                  </v-chip>
+                </div>
+              </v-expansion-panel-title>
+              
+              <v-expansion-panel-text>
+                <div class="topics-container">
+                  <div 
+                    v-for="(topic, topicIndex) in getSubjectTopics(subject.subjectId)" 
+                    :key="topic.id"
+                    class="topic-item mb-4"
+                  >
+                    <div class="d-flex align-center mb-2">
+                      <v-avatar color="primary" size="24" class="me-3">
+                        <span class="text-caption font-weight-bold">{{ topicIndex + 1 }}</span>
+                      </v-avatar>
+                      <div class="flex-grow-1">
+                        <h6 class="text-subtitle-1 mb-0">{{ topic.name }}</h6>
+                        <p v-if="topic.description" class="text-caption text-lightText mb-0">
+                          {{ topic.description }}
+                        </p>
+                      </div>
+                      <v-chip size="x-small" color="warning" variant="tonal">
+                        {{ topic.estimatedHours }}h
+                      </v-chip>
+                    </div>
+                    
+                    <!-- Subtópicos -->
+                    <div v-if="topic.subtopics.length > 0" class="subtopics-container ml-8">
+                      <div 
+                        v-for="(subtopic, subIndex) in topic.subtopics" 
+                        :key="subtopic.id"
+                        class="subtopic-item"
+                      >
+                        <div class="d-flex align-center justify-space-between">
+                          <div class="d-flex align-center">
+                            <v-avatar color="grey-lighten-1" size="16" class="me-2">
+                              <span style="font-size: 10px;">{{ subIndex + 1 }}</span>
+                            </v-avatar>
+                            <div>
+                              <span class="text-body-2">{{ subtopic.name }}</span>
+                              <p v-if="subtopic.description" class="text-caption text-lightText mb-0">
+                                {{ subtopic.description }}
+                              </p>
+                            </div>
+                          </div>
+                          <v-chip size="x-small" color="info" variant="tonal">
+                            {{ subtopic.estimatedHours }}h
+                          </v-chip>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div v-else class="ml-8">
+                      <p class="text-caption text-lightText">Nenhum subtópico definido</p>
+                    </div>
+                  </div>
+                  
+                  <div v-if="getSubjectTopics(subject.subjectId).length === 0" class="text-center py-4">
+                    <SvgSprite name="custom-book" style="width: 32px; height: 32px; opacity: 0.3" />
+                    <p class="text-subtitle-2 mt-2 mb-0">Nenhum tópico definido</p>
+                    <p class="text-caption text-lightText">Esta disciplina não possui estrutura de tópicos</p>
+                  </div>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </div>
+        
+        <div v-else class="text-center py-8">
+          <SvgSprite name="custom-book" style="width: 48px; height: 48px; opacity: 0.3" />
+          <p class="text-subtitle-1 mt-3 mb-0">Nenhuma disciplina no ciclo</p>
+          <p class="text-caption text-lightText">Adicione disciplinas para ver os tópicos</p>
+        </div>
+      </v-card-text>
+      
+      <v-card-actions class="pa-6 pt-0">
+        <v-spacer />
+        <v-btn @click="topicsDialog = false" variant="outlined">
+          Fechar
+        </v-btn>
+        <v-btn 
+          color="primary" 
+          @click="topicsDialog = false; openEditDialog(selectedCycleForTopics)"
+          variant="flat"
+          prepend-icon="mdi-pencil"
+        >
+          Editar Ciclo
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 
   <!-- Dialog para Editar Ciclo -->
   <v-dialog v-model="editDialog" max-width="600px" persistent>
@@ -716,7 +1161,7 @@ onMounted(() => {
                     <h6 class="text-subtitle-2 mb-0">{{ subject.name }}</h6>
                   </div>
                   
-                  <div class="d-flex justify-space-between align-center">
+                  <div class="d-flex justify-space-between align-center mb-2">
                     <v-chip 
                       size="x-small" 
                       :color="subject.status === 'completed' ? 'success' : 
@@ -728,7 +1173,12 @@ onMounted(() => {
                          subject.status === 'to_study' ? 'A Estudar' : subject.status }}
                     </v-chip>
                     
-                    <span class="text-caption">{{ subject.estimatedMinutes }}min</span>
+                    <span class="text-caption">{{ formatMinutes(subject.estimatedMinutes) }}</span>
+                  </div>
+                  
+                  <div class="text-caption text-lightText">
+                    {{ getSubjectTopics(subject.subjectId).length }} tópicos • 
+                    {{ getTotalSubtopics(subject.subjectId) }} subtópicos
                   </div>
                 </v-card-text>
               </v-card>
@@ -831,17 +1281,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.cycles-list {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.cycle-card {
+.cycle-card,
+.cycle-detailed-card {
   transition: all 0.3s ease;
   border-radius: 16px;
+  position: relative;
 }
 
-.cycle-card:hover {
+.cycle-card:hover,
+.cycle-detailed-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
@@ -849,6 +1297,12 @@ onMounted(() => {
 .active-cycle {
   border: 2px solid rgb(var(--v-theme-success));
   background: rgba(var(--v-theme-success), 0.02);
+}
+
+.drag-over {
+  border: 2px dashed rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.05);
+  transform: scale(1.02);
 }
 
 .stat-item {
@@ -872,6 +1326,102 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
+.subjects-preview {
+  border-top: 1px solid rgba(var(--v-theme-borderLight), 0.5);
+  padding-top: 1rem;
+}
+
+.subjects-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.subjects-detailed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.subject-detailed-card {
+  padding: 1rem;
+  background: rgba(var(--v-theme-containerBg), 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: grab;
+}
+
+.subject-detailed-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.subject-detailed-card:active {
+  cursor: grabbing;
+}
+
+.draggable-chip {
+  cursor: grab;
+}
+
+.draggable-chip:active {
+  cursor: grabbing;
+}
+
+.drag-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.subject-detailed-card:hover .drag-indicator {
+  opacity: 1;
+}
+
+.topics-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.topic-item {
+  padding: 1rem;
+  background: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+.subtopics-container {
+  background: rgba(var(--v-theme-containerBg), 0.2);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.subtopic-item {
+  padding: 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  background: rgba(var(--v-theme-surface), 0.5);
+}
+
+.subtopic-item:last-child {
+  margin-bottom: 0;
+}
+
+.subjects-section {
+  border-top: 1px solid rgba(var(--v-theme-borderLight), 0.5);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.detailed-view {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .dialog-card {
   border-radius: 16px;
 }
@@ -882,27 +1432,31 @@ onMounted(() => {
 }
 
 /* Scrollbar customizada */
-.cycles-list::-webkit-scrollbar {
+.detailed-view::-webkit-scrollbar,
+.topics-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.cycles-list::-webkit-scrollbar-track {
+.detailed-view::-webkit-scrollbar-track,
+.topics-container::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 3px;
 }
 
-.cycles-list::-webkit-scrollbar-thumb {
+.detailed-view::-webkit-scrollbar-thumb,
+.topics-container::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
 }
 
-.cycles-list::-webkit-scrollbar-thumb:hover {
+.detailed-view::-webkit-scrollbar-thumb:hover,
+.topics-container::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }
 
 @media (max-width: 960px) {
-  .stat-item {
-    margin-bottom: 1rem;
+  .subjects-detailed-grid {
+    grid-template-columns: 1fr;
   }
   
   .d-flex.flex-column.gap-2 {
@@ -912,3 +1466,4 @@ onMounted(() => {
   }
 }
 </style>
+</v-card-text>
