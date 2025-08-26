@@ -242,33 +242,99 @@ onMounted(() => {
 
           <v-row>
             <v-col cols="12">
-              <v-text-field
-                v-model="subjectData.name"
-                label="Nome da Disciplina"
-                :rules="[rules.required]"
-                variant="outlined"
-                placeholder="Ex: Matemática Avançada"
-                prepend-inner-icon="mdi-book-outline"
-                density="comfortable"
-                class="mb-2"
-              />
+              <div class="input-group mb-6">
+                <v-label class="input-label mb-3">
+                  <div class="d-flex align-center">
+                    <v-avatar color="primary" size="24" class="me-2">
+                      <SvgSprite name="custom-book" style="width: 12px; height: 12px" />
+                    </v-avatar>
+                    <span class="text-h6 font-weight-medium">Nome da Disciplina</span>
+                    <v-chip size="x-small" color="error" variant="tonal" class="ml-2">Obrigatório</v-chip>
+                  </div>
+                </v-label>
+                <v-text-field
+                  v-model="subjectData.name"
+                  :rules="[rules.required]"
+                  variant="outlined"
+                  placeholder="Ex: Matemática Avançada, Física Quântica, História do Brasil..."
+                  density="comfortable"
+                  class="subject-name-input"
+                  hide-details="auto"
+                >
+                  <template v-slot:prepend-inner>
+                    <v-avatar :color="subjectData.color" size="32" class="me-3">
+                      <SvgSprite name="custom-book" style="width: 16px; height: 16px" />
+                    </v-avatar>
+                  </template>
+                </v-text-field>
+                <div class="input-helper mt-2">
+                  <small class="text-caption text-lightText">
+                    <SvgSprite name="custom-info" style="width: 12px; height: 12px" class="me-1" />
+                    Escolha um nome claro e específico para sua disciplina
+                  </small>
+                </div>
+              </div>
             </v-col>
             
             <v-col cols="12">
-              <v-textarea
-                v-model="subjectData.description"
-                label="Descrição"
-                variant="outlined"
-                rows="3"
-                placeholder="Descreva o conteúdo e objetivos da disciplina..."
-                prepend-inner-icon="mdi-text"
-                density="comfortable"
-                class="mb-2"
-              />
+              <div class="input-group mb-6">
+                <v-label class="input-label mb-3">
+                  <div class="d-flex align-center">
+                    <v-avatar color="info" size="24" class="me-2">
+                      <SvgSprite name="custom-text" style="width: 12px; height: 12px" />
+                    </v-avatar>
+                    <span class="text-h6 font-weight-medium">Descrição da Disciplina</span>
+                    <v-chip size="x-small" color="success" variant="tonal" class="ml-2">Opcional</v-chip>
+                  </div>
+                </v-label>
+                <v-textarea
+                  v-model="subjectData.description"
+                  variant="outlined"
+                  rows="4"
+                  placeholder="Descreva os objetivos, conteúdo programático e metodologia de estudo desta disciplina. Ex: Estudo completo de cálculo diferencial e integral, com foco em aplicações práticas..."
+                  density="comfortable"
+                  class="subject-description-input"
+                  hide-details="auto"
+                  counter="500"
+                  maxlength="500"
+                >
+                  <template v-slot:prepend-inner>
+                    <v-avatar color="info" size="32" class="me-3 mt-2">
+                      <SvgSprite name="custom-text" style="width: 16px; height: 16px" />
+                    </v-avatar>
+                  </template>
+                </v-textarea>
+                <div class="input-helper mt-2">
+                  <div class="d-flex justify-space-between align-center">
+                    <small class="text-caption text-lightText">
+                      <SvgSprite name="custom-info" style="width: 12px; height: 12px" class="me-1" />
+                      Uma boa descrição ajuda a manter o foco nos objetivos de estudo
+                    </small>
+                    <small class="text-caption text-lightText">
+                      {{ subjectData.description.length }}/500 caracteres
+                    </small>
+                  </div>
+                </div>
+              </div>
             </v-col>
             
             <v-col cols="12">
-              <v-label class="text-subtitle-2 mb-3 d-block">Cor da Disciplina</v-label>
+              <div class="input-group">
+                <v-label class="input-label mb-3">
+                  <div class="d-flex align-center">
+                    <v-avatar color="warning" size="24" class="me-2">
+                      <SvgSprite name="custom-palette" style="width: 12px; height: 12px" />
+                    </v-avatar>
+                    <span class="text-h6 font-weight-medium">Cor da Disciplina</span>
+                  </div>
+                </v-label>
+                <div class="input-helper mb-3">
+                  <small class="text-caption text-lightText">
+                    <SvgSprite name="custom-info" style="width: 12px; height: 12px" class="me-1" />
+                    Escolha uma cor para identificar visualmente esta disciplina no sistema
+                  </small>
+                </div>
+              </div>
               <div class="d-flex flex-wrap gap-2">
                 <v-btn
                   v-for="color in colors"
@@ -793,6 +859,68 @@ onMounted(() => {
 /* Layout e Containers */
 .topics-container {
   margin-top: 1rem;
+}
+
+/* Input Groups Styling */
+.input-group {
+  position: relative;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.input-helper {
+  padding-left: 0.5rem;
+}
+
+.subject-name-input {
+  .v-field {
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  .v-field--focused {
+    box-shadow: 0 4px 16px rgba(var(--v-theme-primary), 0.15);
+    transform: translateY(-1px);
+  }
+  
+  .v-field__input {
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding-left: 1rem;
+  }
+  
+  .v-field__prepend-inner {
+    padding-top: 0;
+    align-items: center;
+  }
+}
+
+.subject-description-input {
+  .v-field {
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  .v-field--focused {
+    box-shadow: 0 4px 16px rgba(var(--v-theme-info), 0.15);
+    transform: translateY(-1px);
+  }
+  
+  .v-field__input {
+    font-size: 1rem;
+    line-height: 1.6;
+    padding-left: 1rem;
+  }
+  
+  .v-field__prepend-inner {
+    padding-top: 0.5rem;
+    align-items: flex-start;
+  }
 }
 
 .topic-panels {
