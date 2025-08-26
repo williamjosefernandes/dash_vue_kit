@@ -401,12 +401,46 @@ export const useStudyStore = defineStore('study', {
       const data = localStorage.getItem('study-data');
       if (data) {
         const parsed = JSON.parse(data);
-        this.subjects = parsed.subjects || [];
-        this.studySessions = parsed.studySessions || [];
-        this.tasks = parsed.tasks || [];
-        this.studyPlans = parsed.studyPlans || [];
+        this.subjects = (parsed.subjects || []).map((subject: any) => ({
+          ...subject,
+          studiedHours: subject.studiedHours || 0,
+          totalHours: subject.totalHours || 0,
+          createdAt: subject.createdAt ? new Date(subject.createdAt) : new Date(),
+          updatedAt: subject.updatedAt ? new Date(subject.updatedAt) : new Date()
+        }));
+        this.studySessions = (parsed.studySessions || []).map((session: any) => ({
+          ...session,
+          duration: session.duration || 0,
+          date: session.date ? new Date(session.date) : new Date()
+        }));
+        this.tasks = (parsed.tasks || []).map((task: any) => ({
+          ...task,
+          createdAt: task.createdAt ? new Date(task.createdAt) : new Date()
+        }));
+        this.studyPlans = (parsed.studyPlans || []).map((plan: any) => ({
+          ...plan,
+          startDate: plan.startDate ? new Date(plan.startDate) : new Date(),
+          endDate: plan.endDate ? new Date(plan.endDate) : new Date(),
+          createdAt: plan.createdAt ? new Date(plan.createdAt) : new Date(),
+          updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : new Date()
+        }));
         this.activeStudyPlan = parsed.activeStudyPlan || null;
-        this.studyCycles = parsed.studyCycles || [];
+        this.studyCycles = (parsed.studyCycles || []).map((cycle: any) => ({
+          ...cycle,
+          totalHours: cycle.totalHours || 0,
+          completedHours: cycle.completedHours || 0,
+          startDate: cycle.startDate ? new Date(cycle.startDate) : new Date(),
+          endDate: cycle.endDate ? new Date(cycle.endDate) : new Date(),
+          createdAt: cycle.createdAt ? new Date(cycle.createdAt) : new Date(),
+          updatedAt: cycle.updatedAt ? new Date(cycle.updatedAt) : new Date(),
+          tasks: (cycle.tasks || []).map((task: any) => ({
+            ...task,
+            estimatedHours: task.estimatedHours || 0,
+            actualHours: task.actualHours || 0,
+            assignedDate: task.assignedDate ? new Date(task.assignedDate) : new Date(),
+            completedDate: task.completedDate ? new Date(task.completedDate) : null
+          }))
+        }));
         this.activeCycle = parsed.activeCycle || null;
       }
     }

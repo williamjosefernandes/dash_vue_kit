@@ -109,7 +109,7 @@ const getPriorityIcon = (priority: string) => {
 };
 
 const formatHours = (hours: number) => {
-  return `${hours.toFixed(1)}h`;
+  return `${(hours || 0).toFixed(1)}h`;
 };
 
 const getCycleProgress = () => {
