@@ -72,6 +72,14 @@ const currentSubtopic = ref({
 });
 const currentTopicIndex = ref(-1);
 
+// Dialog para importar estrutura
+const importDialog = ref(false);
+const importText = ref('');
+const importPreview = ref<{ topics: Topic[] }>({ topics: [] });
+const showPreview = ref(false);
+
+// Exemplo de estrutura para ajudar o usuário
+const exampleStructure = `1 Compreensão e interpretação de textos de gêneros variados. 2 Reconhecimento de tipos e gêneros textuais. 3 Domínio da ortografia oficial. 4 Domínio dos mecanismos de coesão textual. 4.1 Emprego de elementos de referenciação, substituição e repetição, de conectores e de outros elementos de sequenciação textual. 4.2 Emprego de tempos e modos verbais. 5 Domínio da estrutura morfossintática do período. 5.1 Emprego das classes de palavras. 5.2 Relações de coordenação entre orações e entre termos da oração. 5.3 Relações de subordinação entre orações e entre termos da oração. 5.4 Emprego dos sinais de pontuação. 5.5 Concordância verbal e nominal. 5.6 Regência verbal e nominal. 5.7 Emprego do sinal indicativo de crase. 5.8 Colocação dos pronomes átonos. 6 Reescrita de frases e parágrafos do texto. 6.1 Significação das palavras. 6.2 Substituição de palavras ou de trechos de texto`;
 const totalEstimatedHours = computed(() => {
   return subjectData.value.topics.reduce((total, topic) => {
     const topicHours = topic.estimatedHours + topic.subtopics.reduce((subTotal, subtopic) => subTotal + subtopic.estimatedHours, 0);
@@ -174,6 +182,96 @@ const updateTotalHours = () => {
   subjectData.value.totalHours = totalEstimatedHours.value;
 };
 
+// Função para parsear a estrutura importada
+const parseImportedStructure = (text: string) => {
+  const topics: Topic[] = [];
+  const lines = text.split(/(?=\d+\s)/).filter(line => line.trim());
+  
+  lines.forEach(line => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return;
+    
+    // Regex para capturar número do tópico e conteúdo
+    const topicMatch = trimmedLine.match(/^(\d+)\s+(.+?)(?=\s+\d+\.\d+|\s+\d+\s|$)/);
+    if (topicMatch) {
+      const [, topicNumber, topicContent] = topicMatch;
+      
+      // Criar o tópico principal
+      const topic: Topic = {
+        id: Date.now().toString() + topicNumber,
+        name: `${topicNumber}. ${topicContent.trim()}`,
+        description: '',
+        estimatedHours: 2, // Valor padrão
+        studiedHours: 0,
+        completed: false,
+        subtopics: [],
+        order: parseInt(topicNumber) - 1
+      };
+      
+      // Buscar subtópicos relacionados
+      const subtopicRegex = new RegExp(`${topicNumber}\\.(\\d+)\\s+([^\\d]+?)(?=\\s+\\d+\\.\\d+|\\s+\\d+\\s|$)`, 'g');
+      let subtopicMatch;
+      
+      while ((subtopicMatch = subtopicRegex.exec(trimmedLine)) !== null) {
+        const [, subtopicNumber, subtopicContent] = subtopicMatch;
+        
+        const subtopic: Subtopic = {
+          id: Date.now().toString() + topicNumber + subtopicNumber,
+          name: `${topicNumber}.${subtopicNumber}. ${subtopicContent.trim()}`,
+          description: '',
+          estimatedHours: 1, // Valor padrão
+          studiedHours: 0,
+          completed: false,
+          order: parseInt(subtopicNumber) - 1
+        };
+        
+        topic.subtopics.push(subtopic);
+      }
+      
+      topics.push(topic);
+    }
+  });
+  
+  return topics;
+};
+
+// Função para gerar preview da importação
+const generateImportPreview = () => {
+  if (!importText.value.trim()) {
+    showPreview.value = false;
+    return;
+  }
+  
+  try {
+    const parsedTopics = parseImportedStructure(importText.value);
+    importPreview.value = { topics: parsedTopics };
+    showPreview.value = true;
+  } catch (error) {
+    console.error('Erro ao parsear estrutura:', error);
+    showPreview.value = false;
+  }
+};
+
+// Função para confirmar importação
+const confirmImport = () => {
+  if (importPreview.value.topics.length > 0) {
+    // Adicionar tópicos importados aos existentes
+    subjectData.value.topics.push(...importPreview.value.topics);
+    updateTotalHours();
+    
+    // Limpar e fechar dialog
+    importText.value = '';
+    importPreview.value = { topics: [] };
+    showPreview.value = false;
+    importDialog.value = false;
+  }
+};
+
+// Função para usar exemplo
+const useExample = () => {
+  importText.value = exampleStructure;
+  generateImportPreview();
+};
 const moveTopicUp = (index: number) => {
   if (index > 0) {
     const topics = [...subjectData.value.topics];
@@ -370,15 +468,26 @@ onMounted(() => {
           </template>
           
           <template v-slot:action>
-            <v-btn 
-              color="primary" 
-              @click="openTopicDialog()" 
-              prepend-icon="mdi-plus"
-              variant="flat"
-              rounded="lg"
-            >
-              Adicionar Tópico
-            </v-btn>
+            <div class="d-flex gap-2">
+              <v-btn 
+                color="secondary" 
+                @click="importDialog = true" 
+                prepend-icon="mdi-import"
+                variant="outlined"
+                rounded="lg"
+              >
+                Importar Estrutura
+              </v-btn>
+              <v-btn 
+                color="primary" 
+                @click="openTopicDialog()" 
+                prepend-icon="mdi-plus"
+                variant="flat"
+                rounded="lg"
+              >
+                Adicionar Tópico
+              </v-btn>
+            </div>
           </template>
 
           <div v-if="subjectData.topics.length > 0" class="topics-container">
@@ -854,6 +963,131 @@ onMounted(() => {
           variant="flat"
         >
           {{ editingSubtopic ? 'Salvar' : 'Adicionar' }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Dialog para Importar Estrutura -->
+  <v-dialog v-model="importDialog" max-width="800px" persistent>
+    <v-card class="dialog-card">
+      <v-card-title class="dialog-header">
+        <div class="d-flex align-center">
+          <v-avatar color="secondary" size="32" class="me-3">
+            <SvgSprite name="custom-import" style="width: 16px; height: 16px" />
+          </v-avatar>
+          <span>Importar Estrutura de Tópicos</span>
+        </div>
+      </v-card-title>
+      
+      <v-card-text class="pa-6">
+        <div class="mb-4">
+          <div class="d-flex justify-space-between align-center mb-3">
+            <h6 class="text-h6">Cole sua estrutura de conteúdo:</h6>
+            <v-btn 
+              size="small" 
+              color="info" 
+              variant="tonal" 
+              @click="useExample"
+              prepend-icon="mdi-lightbulb"
+            >
+              Usar Exemplo
+            </v-btn>
+          </div>
+          
+          <v-textarea
+            v-model="importText"
+            label="Estrutura de Conteúdo"
+            variant="outlined"
+            rows="8"
+            placeholder="Cole aqui sua estrutura no formato: 1 Tópico Principal. 1.1 Subtópico. 1.2 Outro Subtópico. 2 Segundo Tópico..."
+            @input="generateImportPreview"
+            class="mb-4"
+          />
+          
+          <v-alert type="info" variant="tonal" density="compact">
+            <div class="text-caption">
+              <strong>Formato esperado:</strong><br>
+              • Tópicos: número + espaço + título (ex: "1 Introdução")<br>
+              • Subtópicos: número.subnúmero + espaço + título (ex: "1.1 Conceitos básicos")<br>
+              • Separe diferentes tópicos naturalmente no texto
+            </div>
+          </v-alert>
+        </div>
+        
+        <!-- Preview da Importação -->
+        <div v-if="showPreview && importPreview.topics.length > 0" class="mt-6">
+          <h6 class="text-h6 mb-3 d-flex align-center">
+            <SvgSprite name="custom-eye" style="width: 18px; height: 18px" class="me-2" />
+            Preview da Importação ({{ importPreview.topics.length }} tópicos)
+          </h6>
+          
+          <v-card variant="outlined" class="preview-container" max-height="300" style="overflow-y: auto;">
+            <v-card-text class="pa-4">
+              <div v-for="(topic, index) in importPreview.topics" :key="topic.id" class="mb-4">
+                <div class="d-flex align-center mb-2">
+                  <v-avatar :color="subjectData.color" size="24" class="me-3">
+                    <span class="text-caption font-weight-bold">{{ index + 1 }}</span>
+                  </v-avatar>
+                  <div>
+                    <h6 class="text-subtitle-2 mb-0">{{ topic.name }}</h6>
+                    <v-chip size="x-small" color="info" variant="tonal" class="mt-1">
+                      {{ topic.estimatedHours }}h • {{ topic.subtopics.length }} subtópicos
+                    </v-chip>
+                  </div>
+                </div>
+                
+                <div v-if="topic.subtopics.length > 0" class="ml-8">
+                  <div 
+                    v-for="(subtopic, subIndex) in topic.subtopics" 
+                    :key="subtopic.id"
+                    class="d-flex align-center mb-1"
+                  >
+                    <v-avatar color="grey-lighten-1" size="16" class="me-2">
+                      <span style="font-size: 10px;">{{ subIndex + 1 }}</span>
+                    </v-avatar>
+                    <span class="text-caption">{{ subtopic.name }}</span>
+                    <v-chip size="x-small" color="warning" variant="tonal" class="ml-2">
+                      {{ subtopic.estimatedHours }}h
+                    </v-chip>
+                  </div>
+                </div>
+              </div>
+            </v-card-text>
+          </v-card>
+          
+          <v-alert type="success" variant="tonal" class="mt-3" density="compact">
+            <div class="text-caption">
+              <strong>Pronto para importar!</strong> 
+              {{ importPreview.topics.reduce((total, topic) => total + topic.estimatedHours + topic.subtopics.reduce((subTotal, sub) => subTotal + sub.estimatedHours, 0), 0) }}h 
+              estimadas no total.
+            </div>
+          </v-alert>
+        </div>
+        
+        <div v-else-if="showPreview && importPreview.topics.length === 0" class="mt-6">
+          <v-alert type="warning" variant="tonal">
+            <div class="text-caption">
+              <strong>Nenhum tópico encontrado.</strong><br>
+              Verifique se o formato está correto ou use o exemplo fornecido.
+            </div>
+          </v-alert>
+        </div>
+      </v-card-text>
+      
+      <v-card-actions class="pa-6 pt-0">
+        <v-spacer />
+        <v-btn @click="importDialog = false; importText = ''; showPreview = false;" variant="outlined">
+          Cancelar
+        </v-btn>
+        <v-btn 
+          color="primary" 
+          @click="confirmImport"
+          :disabled="!showPreview || importPreview.topics.length === 0"
+          variant="flat"
+          prepend-icon="mdi-import"
+        >
+          Importar {{ importPreview.topics.length }} Tópicos
         </v-btn>
       </v-card-actions>
     </v-card>
