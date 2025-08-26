@@ -245,9 +245,6 @@ onMounted(() => {
               <div class="input-group mb-6">
                 <v-label class="input-label mb-3">
                   <div class="d-flex align-center">
-                    <v-avatar color="primary" size="24" class="me-2">
-                      <SvgSprite name="custom-book" style="width: 12px; height: 12px" />
-                    </v-avatar>
                     <span class="text-h6 font-weight-medium">Nome da Disciplina</span>
                     <v-chip size="x-small" color="error" variant="tonal" class="ml-2">Obrigatório</v-chip>
                   </div>
@@ -260,13 +257,7 @@ onMounted(() => {
                   density="comfortable"
                   class="subject-name-input"
                   hide-details="auto"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-avatar :color="subjectData.color" size="32" class="me-3">
-                      <SvgSprite name="custom-book" style="width: 16px; height: 16px" />
-                    </v-avatar>
-                  </template>
-                </v-text-field>
+                />
                 <div class="input-helper mt-2">
                   <small class="text-caption text-lightText">
                     <SvgSprite name="custom-info" style="width: 12px; height: 12px" class="me-1" />
@@ -280,9 +271,6 @@ onMounted(() => {
               <div class="input-group mb-6">
                 <v-label class="input-label mb-3">
                   <div class="d-flex align-center">
-                    <v-avatar color="info" size="24" class="me-2">
-                      <SvgSprite name="custom-text" style="width: 12px; height: 12px" />
-                    </v-avatar>
                     <span class="text-h6 font-weight-medium">Descrição da Disciplina</span>
                     <v-chip size="x-small" color="success" variant="tonal" class="ml-2">Opcional</v-chip>
                   </div>
@@ -297,13 +285,7 @@ onMounted(() => {
                   hide-details="auto"
                   counter="500"
                   maxlength="500"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-avatar color="info" size="32" class="me-3 mt-2">
-                      <SvgSprite name="custom-text" style="width: 16px; height: 16px" />
-                    </v-avatar>
-                  </template>
-                </v-textarea>
+                />
                 <div class="input-helper mt-2">
                   <div class="d-flex justify-space-between align-center">
                     <small class="text-caption text-lightText">
@@ -322,9 +304,6 @@ onMounted(() => {
               <div class="input-group">
                 <v-label class="input-label mb-3">
                   <div class="d-flex align-center">
-                    <v-avatar color="warning" size="24" class="me-2">
-                      <SvgSprite name="custom-palette" style="width: 12px; height: 12px" />
-                    </v-avatar>
                     <span class="text-h6 font-weight-medium">Cor da Disciplina</span>
                   </div>
                 </v-label>
@@ -890,12 +869,7 @@ onMounted(() => {
   .v-field__input {
     font-size: 1.1rem;
     font-weight: 500;
-    padding-left: 1rem;
-  }
-  
-  .v-field__prepend-inner {
-    padding-top: 0;
-    align-items: center;
+    padding-left: 1.5rem;
   }
 }
 
@@ -914,12 +888,7 @@ onMounted(() => {
   .v-field__input {
     font-size: 1rem;
     line-height: 1.6;
-    padding-left: 1rem;
-  }
-  
-  .v-field__prepend-inner {
-    padding-top: 0.5rem;
-    align-items: flex-start;
+    padding-left: 1.5rem;
   }
 }
 
