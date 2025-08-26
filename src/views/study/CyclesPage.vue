@@ -1101,7 +1101,6 @@ onMounted(() => {
       </div>
     </div>
   </UiParentCard>
-  </div>
 
   <!-- Dialog para Editar Tarefa -->
   <v-dialog v-model="taskDialog" max-width="600px" persistent>
