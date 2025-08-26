@@ -91,7 +91,7 @@ const getPriorityText = (priority: string) => {
 };
 
 const formatHours = (hours: number) => {
-  return `${hours.toFixed(1)}h`;
+  return `${(hours || 0).toFixed(1)}h`;
 };
 
 const getCycleProgress = (cycle: any) => {
@@ -217,6 +217,29 @@ const activateCycle = (cycleId: string) => {
   studyStore.updateStudyCycle(cycleId, { status: 'active' });
 };
 
+const completeCycle = (cycleId: string) => {
+  if (confirm('Tem certeza que deseja marcar este ciclo como concluído?')) {
+    studyStore.updateStudyCycle(cycleId, { 
+      status: 'completed',
+      completedHours: studyStore.getCycleById(cycleId)?.totalHours || 0
+    });
+  }
+};
+
+const pauseCycle = (cycleId: string) => {
+  studyStore.updateStudyCycle(cycleId, { status: 'planning' });
+};
+
+const getCyclesByStatus = (status: string) => {
+  return studyStore.studyCycles.filter(cycle => cycle.status === status);
+};
+
+const getTasksCompletionRate = (cycle: any) => {
+  if (cycle.tasks.length === 0) return 0;
+  const completedTasks = cycle.tasks.filter((task: any) => task.status === 'done').length;
+  return Math.round((completedTasks / cycle.tasks.length) * 100);
+};
+
 onMounted(() => {
   studyStore.loadFromLocalStorage();
 });
@@ -225,52 +248,64 @@ onMounted(() => {
 <template>
   <BaseBreadcrumb :title="page.title" :breadcrumbs="breadcrumbs" />
   
-  <!-- Cards de Estatísticas -->
+  <!-- Header Explicativo -->
   <v-row class="mb-6">
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="text-center" color="primary" variant="tonal">
-        <v-card-text>
-          <div class="d-flex align-center justify-center mb-2">
-            <SvgSprite name="custom-refresh" style="width: 24px; height: 24px" />
+    <v-col cols="12">
+      <v-card color="primary" variant="tonal" class="explanation-card">
+        <v-card-text class="pa-6">
+          <div class="d-flex align-center mb-4">
+            <v-avatar color="primary" size="48" class="me-4">
+              <SvgSprite name="custom-refresh" style="width: 24px; height: 24px" />
+            </v-avatar>
+            <div>
+              <h4 class="text-h4 mb-1">Ciclos de Estudo</h4>
+              <p class="text-subtitle-1 mb-0">Organize seus estudos em sprints focados baseados nos seus planos</p>
+            </div>
           </div>
-          <h3 class="text-h3">{{ stats.totalCycles }}</h3>
-          <p class="text-subtitle-2 mb-0">Total de Ciclos</p>
-        </v-card-text>
-      </v-card>
-    </v-col>
-    
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="text-center" color="success" variant="tonal">
-        <v-card-text>
-          <div class="d-flex align-center justify-center mb-2">
-            <SvgSprite name="custom-play" style="width: 24px; height: 24px" />
+          
+          <div class="explanation-content">
+            <v-row>
+              <v-col cols="12" md="8">
+                <p class="text-body-1 mb-3">
+                  Os <strong>Ciclos de Estudo</strong> são períodos focados onde você executa partes específicas dos seus 
+                  <strong>Planos de Estudo</strong>. Cada ciclo tem objetivos claros, prazo definido e tarefas organizadas 
+                  em um quadro kanban para máxima produtividade.
+                </p>
+                
+                <div class="features-list">
+                  <div class="d-flex align-center mb-2">
+                    <SvgSprite name="custom-check" style="width: 16px; height: 16px" class="me-2 text-success" />
+                    <span class="text-body-2">Baseados nos seus Planos de Estudo existentes</span>
+                  </div>
+                  <div class="d-flex align-center mb-2">
+                    <SvgSprite name="custom-target" style="width: 16px; height: 16px" class="me-2 text-success" />
+                    <span class="text-body-2">Objetivos específicos e mensuráveis</span>
+                  </div>
+                  <div class="d-flex align-center mb-2">
+                    <SvgSprite name="custom-window" style="width: 16px; height: 16px" class="me-2 text-success" />
+                    <span class="text-body-2">Gestão visual com quadro kanban</span>
+                  </div>
+                  <div class="d-flex align-center">
+                    <SvgSprite name="custom-clock" style="width: 16px; height: 16px" class="me-2 text-success" />
+                    <span class="text-body-2">Controle de tempo e progresso em tempo real</span>
+                  </div>
+                </div>
+              </v-col>
+              
+              <v-col cols="12" md="4">
+                <div class="quick-stats">
+                  <div class="stat-card">
+                    <h3 class="text-h3 text-primary mb-1">{{ stats.totalCycles }}</h3>
+                    <p class="text-caption mb-0">Ciclos Criados</p>
+                  </div>
+                  <div class="stat-card">
+                    <h3 class="text-h3 text-success mb-1">{{ stats.activeCycles }}</h3>
+                    <p class="text-caption mb-0">Ativos Agora</p>
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
           </div>
-          <h3 class="text-h3">{{ stats.activeCycles }}</h3>
-          <p class="text-subtitle-2 mb-0">Ciclos Ativos</p>
-        </v-card-text>
-      </v-card>
-    </v-col>
-    
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="text-center" color="info" variant="tonal">
-        <v-card-text>
-          <div class="d-flex align-center justify-center mb-2">
-            <SvgSprite name="custom-check" style="width: 24px; height: 24px" />
-          </div>
-          <h3 class="text-h3">{{ stats.completedCycles }}</h3>
-          <p class="text-subtitle-2 mb-0">Concluídos</p>
-        </v-card-text>
-      </v-card>
-    </v-col>
-    
-    <v-col cols="12" sm="6" md="3">
-      <v-card class="text-center" color="warning" variant="tonal">
-        <v-card-text>
-          <div class="d-flex align-center justify-center mb-2">
-            <SvgSprite name="custom-clock" style="width: 24px; height: 24px" />
-          </div>
-          <h3 class="text-h3">{{ Math.round(stats.averageCompletion) }}%</h3>
-          <p class="text-subtitle-2 mb-0">Média de Conclusão</p>
         </v-card-text>
       </v-card>
     </v-col>
@@ -285,8 +320,8 @@ onMounted(() => {
             <SvgSprite name="custom-refresh" style="width: 16px; height: 16px" />
           </v-avatar>
           <div>
-            <span>{{ activeCycle.name }} - Kanban</span>
-            <p class="text-caption text-lightText mb-0">Sprint Ativo</p>
+            <span>{{ activeCycle.name }}</span>
+            <p class="text-caption text-lightText mb-0">Sprint Ativo • {{ getPlanName(activeCycle.planId) }}</p>
           </div>
         </div>
       </template>
@@ -309,7 +344,7 @@ onMounted(() => {
             variant="outlined"
             size="small"
           >
-            Tela Cheia
+            Kanban Completo
           </v-btn>
         </div>
       </template>
@@ -322,9 +357,36 @@ onMounted(() => {
               <v-avatar :color="activeCycle.color" size="48" class="me-3">
                 <SvgSprite name="custom-refresh" style="width: 24px; height: 24px" />
               </v-avatar>
-              <div>
+              <div class="flex-grow-1">
                 <h5 class="text-h5 mb-1">{{ activeCycle.name }}</h5>
-                <p class="text-subtitle-2 text-lightText mb-0">{{ activeCycle.description }}</p>
+                <p class="text-subtitle-2 text-lightText mb-2">{{ activeCycle.description }}</p>
+                
+                <!-- Objetivos do Sprint -->
+                <div v-if="activeCycle.goals.length > 0" class="goals-preview">
+                  <div class="d-flex align-center mb-1">
+                    <SvgSprite name="custom-target" style="width: 14px; height: 14px" class="me-2" />
+                    <span class="text-caption font-weight-medium">Objetivos:</span>
+                  </div>
+                  <div class="d-flex flex-wrap gap-1">
+                    <v-chip
+                      v-for="(goal, index) in activeCycle.goals.slice(0, 3)"
+                      :key="index"
+                      size="x-small"
+                      :color="activeCycle.color"
+                      variant="tonal"
+                    >
+                      {{ goal }}
+                    </v-chip>
+                    <v-chip
+                      v-if="activeCycle.goals.length > 3"
+                      size="x-small"
+                      color="grey"
+                      variant="tonal"
+                    >
+                      +{{ activeCycle.goals.length - 3 }}
+                    </v-chip>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -340,30 +402,59 @@ onMounted(() => {
                 height="8"
                 rounded
               />
+              <div class="d-flex justify-space-between mt-1">
+                <span class="text-caption">{{ formatHours(activeCycle.completedHours) }} concluídas</span>
+                <span class="text-caption">{{ formatHours(activeCycle.totalHours) }} totais</span>
+              </div>
             </div>
           </v-col>
           
           <v-col cols="12" md="4">
             <div class="sprint-stats">
               <div class="stat-item">
-                <SvgSprite name="custom-clock" style="width: 16px; height: 16px" class="me-2" />
-                <span>{{ formatHours(activeCycle.completedHours) }} / {{ formatHours(activeCycle.totalHours) }}</span>
-              </div>
-              <div class="stat-item">
                 <SvgSprite name="custom-calendar" style="width: 16px; height: 16px" class="me-2" />
                 <span>{{ getDaysRemaining(activeCycle.endDate) }} dias restantes</span>
               </div>
               <div class="stat-item">
                 <SvgSprite name="custom-list" style="width: 16px; height: 16px" class="me-2" />
-                <span>{{ activeCycle.tasks.length }} tarefa(s)</span>
+                <span>{{ activeCycle.tasks.length }} tarefa(s) total</span>
+              </div>
+              <div class="stat-item">
+                <SvgSprite name="custom-check" style="width: 16px; height: 16px" class="me-2" />
+                <span>{{ getTasksCompletionRate(activeCycle) }}% das tarefas concluídas</span>
+              </div>
+              
+              <!-- Ações do Sprint -->
+              <div class="sprint-actions mt-3">
+                <v-btn
+                  color="success"
+                  @click="completeCycle(activeCycle.id)"
+                  prepend-icon="mdi-check-circle"
+                  variant="tonal"
+                  size="small"
+                  block
+                  class="mb-2"
+                >
+                  Finalizar Sprint
+                </v-btn>
+                <v-btn
+                  color="warning"
+                  @click="pauseCycle(activeCycle.id)"
+                  prepend-icon="mdi-pause"
+                  variant="outlined"
+                  size="small"
+                  block
+                >
+                  Pausar Sprint
+                </v-btn>
               </div>
             </div>
           </v-col>
         </v-row>
       </div>
 
-      <!-- Quadro Kanban -->
-      <div class="kanban-board">
+      <!-- Quadro Kanban Resumido -->
+      <div class="kanban-board-summary">
         <v-row class="kanban-columns">
           <v-col
             v-for="column in kanbanColumns"
@@ -398,8 +489,8 @@ onMounted(() => {
                 <!-- Estatísticas da Coluna -->
                 <div class="column-stats">
                   <div class="d-flex justify-space-between text-caption mb-1">
-                    <span>{{ formatHours(getColumnStats(column.status).totalHours) }} estimadas</span>
-                    <span>{{ formatHours(getColumnStats(column.status).completedHours) }} reais</span>
+                    <span>{{ formatHours(getColumnStats(column.status).totalHours) }} est.</span>
+                    <span>{{ formatHours(getColumnStats(column.status).completedHours) }} real</span>
                   </div>
                   <v-progress-linear
                     :model-value="getColumnStats(column.status).totalHours > 0 ? 
@@ -411,105 +502,58 @@ onMounted(() => {
                 </div>
               </div>
               
-              <!-- Lista de Tarefas -->
-              <div class="tasks-container">
+              <!-- Lista de Tarefas Resumida -->
+              <div class="tasks-container-summary">
                 <div
-                  v-for="task in getTasksByStatus(column.status)"
+                  v-for="task in getTasksByStatus(column.status).slice(0, 3)"
                   :key="task.id"
-                  class="task-card"
+                  class="task-card-summary"
                   @click="openTaskDialog(task)"
                 >
                   <v-card 
                     variant="outlined" 
                     hover
-                    class="task-item"
+                    class="task-item-summary"
                     :class="`priority-${task.priority}`"
                   >
-                    <v-card-text class="pa-3">
-                      <!-- Header da Tarefa -->
-                      <div class="d-flex align-center justify-space-between mb-2">
+                    <v-card-text class="pa-2">
+                      <div class="d-flex align-center justify-space-between mb-1">
                         <v-chip
                           :color="getSubjectColor(task.subjectId)"
                           size="x-small"
                           variant="tonal"
                         >
-                          {{ getSubjectName(task.subjectId) }}
+                          {{ getSubjectName(task.subjectId).substring(0, 8) }}{{ getSubjectName(task.subjectId).length > 8 ? '...' : '' }}
                         </v-chip>
                         
-                        <v-menu>
-                          <template v-slot:activator="{ props }">
-                            <v-btn
-                              v-bind="props"
-                              icon
-                              size="x-small"
-                              variant="text"
-                              @click.stop
-                            >
-                              <SvgSprite name="custom-more" style="width: 12px; height: 12px" />
-                            </v-btn>
-                          </template>
-                          <v-list density="compact">
-                            <!-- Ações de Movimento -->
-                            <v-list-item
-                              v-for="col in kanbanColumns.filter(c => c.status !== task.status)"
-                              :key="col.status"
-                              @click="moveTask(task.id, col.status as CycleTask['status'])"
-                            >
-                              <template v-slot:prepend>
-                                <v-avatar :color="col.color" size="16" class="me-2">
-                                  <SvgSprite :name="col.icon" style="width: 8px; height: 8px" />
-                                </v-avatar>
-                              </template>
-                              <v-list-item-title class="text-caption">{{ col.title }}</v-list-item-title>
-                            </v-list-item>
-                            
-                            <v-divider class="my-1" />
-                            <v-list-item @click="deleteTask(task.id)" class="text-error">
-                              <template v-slot:prepend>
-                                <SvgSprite name="custom-trash" style="width: 12px; height: 12px" class="me-2" />
-                              </template>
-                              <v-list-item-title class="text-caption">Excluir</v-list-item-title>
-                            </v-list-item>
-                          </v-list>
-                        </v-menu>
+                        <span class="text-caption">
+                          {{ formatHours(task.estimatedHours) }}
+                        </span>
                       </div>
                       
-                      <!-- Título da Tarefa -->
-                      <h6 class="text-subtitle-2 mb-2">{{ task.title }}</h6>
+                      <h6 class="text-caption font-weight-medium mb-1">
+                        {{ task.title.length > 25 ? task.title.substring(0, 25) + '...' : task.title }}
+                      </h6>
                       
-                      <!-- Descrição -->
-                      <p v-if="task.description" class="text-caption text-lightText mb-2">
-                        {{ task.description.length > 50 ? task.description.substring(0, 50) + '...' : task.description }}
-                      </p>
-                      
-                      <!-- Footer da Tarefa -->
                       <div class="d-flex align-center justify-space-between">
                         <v-chip
                           :color="getPriorityColor(task.priority)"
                           size="x-small"
                           variant="tonal"
                         >
-                          {{ getPriorityText(task.priority) }}
+                          {{ task.priority === 'high' ? 'A' : task.priority === 'medium' ? 'M' : 'B' }}
                         </v-chip>
                         
-                        <span class="text-caption">
-                          <SvgSprite name="custom-clock" style="width: 10px; height: 10px" class="me-1" />
-                          {{ formatHours(task.estimatedHours) }}
-                        </span>
-                      </div>
-                      
-                      <!-- Ações Rápidas -->
-                      <div class="quick-actions mt-2">
+                        <!-- Ação Rápida -->
                         <v-btn
                           v-if="task.status === 'todo'"
                           @click.stop="startTask(task.id)"
                           color="warning"
                           size="x-small"
-                          variant="tonal"
-                          block
-                          prepend-icon="mdi-play"
+                          variant="text"
+                          icon
                         >
-                          Iniciar
+                          <SvgSprite name="custom-play" style="width: 10px; height: 10px" />
                         </v-btn>
                         
                         <v-btn
@@ -517,35 +561,42 @@ onMounted(() => {
                           @click.stop="completeTask(task.id)"
                           color="success"
                           size="x-small"
-                          variant="tonal"
-                          block
-                          prepend-icon="mdi-check"
+                          variant="text"
+                          icon
                         >
-                          Concluir
+                          <SvgSprite name="custom-check" style="width: 10px; height: 10px" />
                         </v-btn>
                         
-                        <div v-if="task.status === 'done'" class="text-center">
-                          <v-chip
-                            color="success"
-                            size="x-small"
-                            variant="flat"
-                            prepend-icon="mdi-check-circle"
-                          >
-                            Finalizada
-                          </v-chip>
-                        </div>
+                        <v-icon
+                          v-if="task.status === 'done'"
+                          color="success"
+                          size="12"
+                          icon="mdi-check-circle"
+                        />
                       </div>
                     </v-card-text>
                   </v-card>
                 </div>
                 
+                <!-- Indicador de Mais Tarefas -->
+                <div v-if="getTasksByStatus(column.status).length > 3" class="more-tasks">
+                  <v-chip
+                    :color="column.color"
+                    size="small"
+                    variant="outlined"
+                    @click="$router.push(`/main/cycles/${activeCycle.id}`)"
+                  >
+                    +{{ getTasksByStatus(column.status).length - 3 }} mais
+                  </v-chip>
+                </div>
+                
                 <!-- Estado Vazio da Coluna -->
-                <div v-if="getTasksByStatus(column.status).length === 0" class="empty-column">
-                  <div class="empty-state">
-                    <v-avatar :color="column.color" size="32" class="mb-2">
-                      <SvgSprite :name="column.icon" style="width: 16px; height: 16px; opacity: 0.5" />
+                <div v-if="getTasksByStatus(column.status).length === 0" class="empty-column-summary">
+                  <div class="empty-state-summary">
+                    <v-avatar :color="column.color" size="24" class="mb-1">
+                      <SvgSprite :name="column.icon" style="width: 12px; height: 12px; opacity: 0.5" />
                     </v-avatar>
-                    <p class="text-caption mb-0">{{ column.description }}</p>
+                    <p class="text-caption mb-0">Vazio</p>
                   </div>
                 </div>
               </div>
@@ -556,24 +607,331 @@ onMounted(() => {
     </UiParentCard>
   </div>
 
-  <UiParentCard title="Meus Ciclos de Estudo">
-    <template v-slot:action>
-      <v-btn color="primary" prepend-icon="mdi-plus">
-        <router-link to="/main/cycles/new" class="text-decoration-none text-white">
-          Novo Ciclo
-        </router-link>
-      </v-btn>
-    </template>
+  <!-- Todos os Ciclos Organizados por Status -->
+  <div class="cycles-by-status">
+    <!-- Ciclos Ativos -->
+    <div v-if="getCyclesByStatus('active').length > 0" class="mb-6">
+      <UiParentCard>
+        <template v-slot:title>
+          <div class="d-flex align-center">
+            <v-avatar color="success" size="32" class="me-3">
+              <SvgSprite name="custom-play" style="width: 16px; height: 16px" />
+            </v-avatar>
+            <span>Ciclos Ativos</span>
+          </div>
+        </template>
 
-    <v-row v-if="studyStore.studyCycles.length > 0">
+        <v-row>
+          <v-col 
+            v-for="cycle in getCyclesByStatus('active')" 
+            :key="cycle.id"
+            cols="12" 
+            md="6" 
+            lg="4"
+          >
+            <v-card class="h-100 active-cycle-card" :color="cycle.color" variant="tonal">
+              <v-card-text>
+                <div class="d-flex align-center justify-space-between mb-3">
+                  <v-chip 
+                    color="success" 
+                    size="small" 
+                    variant="flat"
+                    prepend-icon="mdi-play"
+                  >
+                    ATIVO
+                  </v-chip>
+                  
+                  <v-menu>
+                    <template v-slot:activator="{ props }">
+                      <v-btn icon size="small" variant="text" v-bind="props">
+                        <SvgSprite name="custom-more" style="width: 16px; height: 16px" />
+                      </v-btn>
+                    </template>
+                    <v-list>
+                      <v-list-item :to="`/main/cycles/${cycle.id}`">
+                        <template v-slot:prepend>
+                          <SvgSprite name="custom-window" style="width: 16px; height: 16px" />
+                        </template>
+                        <v-list-item-title>Abrir Kanban</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="completeCycle(cycle.id)" class="text-success">
+                        <template v-slot:prepend>
+                          <SvgSprite name="custom-check" style="width: 16px; height: 16px" />
+                        </template>
+                        <v-list-item-title>Finalizar</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="pauseCycle(cycle.id)" class="text-warning">
+                        <template v-slot:prepend>
+                          <SvgSprite name="custom-pause" style="width: 16px; height: 16px" />
+                        </template>
+                        <v-list-item-title>Pausar</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </div>
+                
+                <div class="d-flex align-center mb-3">
+                  <v-avatar :color="cycle.color" size="40" class="me-3">
+                    <SvgSprite name="custom-refresh" style="width: 20px; height: 20px" />
+                  </v-avatar>
+                  <div>
+                    <h6 class="text-h6 mb-1">{{ cycle.name }}</h6>
+                    <p class="text-caption text-lightText mb-0">{{ getPlanName(cycle.planId) }}</p>
+                  </div>
+                </div>
+                
+                <!-- Progresso Visual -->
+                <div class="mb-3">
+                  <div class="d-flex justify-space-between mb-1">
+                    <span class="text-caption">Progresso</span>
+                    <span class="text-caption font-weight-bold">{{ Math.round(getCycleProgress(cycle)) }}%</span>
+                  </div>
+                  <v-progress-linear
+                    :model-value="getCycleProgress(cycle)"
+                    :color="cycle.color"
+                    height="6"
+                    rounded
+                  />
+                </div>
+                
+                <!-- Estatísticas Rápidas -->
+                <div class="cycle-quick-stats">
+                  <div class="d-flex justify-space-between mb-2">
+                    <div class="text-center">
+                      <h6 class="text-h6 mb-0">{{ cycle.tasks.filter(t => t.status === 'done').length }}</h6>
+                      <p class="text-caption mb-0">Concluídas</p>
+                    </div>
+                    <div class="text-center">
+                      <h6 class="text-h6 mb-0">{{ cycle.tasks.filter(t => t.status === 'in-progress').length }}</h6>
+                      <p class="text-caption mb-0">Em Progresso</p>
+                    </div>
+                    <div class="text-center">
+                      <h6 class="text-h6 mb-0">{{ cycle.tasks.filter(t => t.status === 'todo').length }}</h6>
+                      <p class="text-caption mb-0">A Fazer</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Informações Adicionais -->
+                <div class="cycle-info">
+                  <div class="d-flex align-center mb-1">
+                    <SvgSprite name="custom-clock" style="width: 12px; height: 12px" class="me-2" />
+                    <span class="text-caption">{{ formatHours(cycle.completedHours) }} / {{ formatHours(cycle.totalHours) }}</span>
+                  </div>
+                  <div class="d-flex align-center">
+                    <SvgSprite name="custom-calendar" style="width: 12px; height: 12px" class="me-2" />
+                    <span class="text-caption">
+                      {{ new Date(cycle.startDate).toLocaleDateString() }} - 
+                      {{ new Date(cycle.endDate).toLocaleDateString() }}
+                    </span>
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </UiParentCard>
+    </div>
+
+    <!-- Outros Ciclos -->
+    <UiParentCard title="Todos os Ciclos de Estudo">
+      <template v-slot:action>
+        <div class="d-flex gap-2">
+          <v-btn color="primary" prepend-icon="mdi-plus">
+            <router-link to="/main/cycles/new" class="text-decoration-none text-white">
+              Novo Ciclo
+            </router-link>
+          </v-btn>
+          <v-btn 
+            v-if="studyStore.studyPlans.length === 0"
+            color="secondary" 
+            variant="outlined"
+            prepend-icon="mdi-calendar"
+          >
+            <router-link to="/main/plans/new" class="text-decoration-none">
+              Criar Plano Primeiro
+            </router-link>
+          </v-btn>
+        </div>
+      </template>
+
+      <!-- Filtros por Status -->
+      <div class="status-filters mb-4">
+        <v-chip-group>
+          <v-chip 
+            v-for="status in ['planning', 'active', 'completed', 'cancelled']"
+            :key="status"
+            :color="getStatusColor(status)"
+            variant="tonal"
+            size="small"
+          >
+            {{ getStatusText(status) }} ({{ getCyclesByStatus(status).length }})
+          </v-chip>
+        </v-chip-group>
+      </div>
+
+      <v-row v-if="studyStore.studyCycles.length > 0">
+        <v-col 
+          v-for="cycle in studyStore.studyCycles" 
+          :key="cycle.id"
+          cols="12" 
+          md="6" 
+          lg="4"
+        >
+          <v-card 
+            class="h-100 cycle-card" 
+            :class="{ 
+              'active-border': cycle.status === 'active',
+              'completed-card': cycle.status === 'completed'
+            }"
+            variant="outlined"
+          >
+            <v-card-text>
+              <div class="d-flex align-center justify-space-between mb-3">
+                <v-chip 
+                  :color="getStatusColor(cycle.status)" 
+                  size="small" 
+                  variant="tonal"
+                >
+                  {{ getStatusText(cycle.status) }}
+                </v-chip>
+                
+                <v-menu>
+                  <template v-slot:activator="{ props }">
+                    <v-btn icon size="small" variant="text" v-bind="props">
+                      <SvgSprite name="custom-more" style="width: 16px; height: 16px" />
+                    </v-btn>
+                  </template>
+                  <v-list>
+                    <v-list-item :to="`/main/cycles/${cycle.id}`">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-window" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Ver Kanban</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item 
+                      v-if="cycle.status === 'planning'"
+                      @click="activateCycle(cycle.id)"
+                    >
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-play" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Ativar Ciclo</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item 
+                      v-if="cycle.status === 'active'"
+                      @click="completeCycle(cycle.id)"
+                      class="text-success"
+                    >
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-check" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Finalizar</v-list-item-title>
+                    </v-list-item>
+                    <v-divider />
+                    <v-list-item @click="deleteCycle(cycle.id)" class="text-error">
+                      <template v-slot:prepend>
+                        <SvgSprite name="custom-trash" style="width: 16px; height: 16px" />
+                      </template>
+                      <v-list-item-title>Excluir</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </div>
+              
+              <div class="d-flex align-center mb-3">
+                <v-avatar :color="cycle.color" size="32" class="me-3">
+                  <SvgSprite name="custom-refresh" style="width: 16px; height: 16px" />
+                </v-avatar>
+                <div>
+                  <h6 class="text-h6 mb-0">{{ cycle.name }}</h6>
+                  <p class="text-caption text-lightText mb-0">{{ getPlanName(cycle.planId) }}</p>
+                </div>
+              </div>
+              
+              <p class="text-caption text-lightText mb-3">{{ cycle.description }}</p>
+              
+              <!-- Progresso do Ciclo -->
+              <div class="mb-3">
+                <div class="d-flex justify-space-between mb-1">
+                  <span class="text-caption">Progresso</span>
+                  <span class="text-caption">{{ Math.round(getCycleProgress(cycle)) }}%</span>
+                </div>
+                <v-progress-linear
+                  :model-value="getCycleProgress(cycle)"
+                  :color="cycle.color"
+                  height="6"
+                  rounded
+                />
+              </div>
+              
+              <!-- Informações do Ciclo -->
+              <div class="mb-3">
+                <div class="d-flex align-center mb-1">
+                  <SvgSprite name="custom-clock" style="width: 12px; height: 12px" class="me-2" />
+                  <span class="text-caption">{{ formatHours(cycle.completedHours) }} / {{ formatHours(cycle.totalHours) }}</span>
+                </div>
+                
+                <div class="d-flex align-center mb-1">
+                  <SvgSprite name="custom-calendar" style="width: 12px; height: 12px" class="me-2" />
+                  <span class="text-caption">
+                    {{ new Date(cycle.startDate).toLocaleDateString() }} - 
+                    {{ new Date(cycle.endDate).toLocaleDateString() }}
+                  </span>
+                </div>
+                
+                <div class="d-flex align-center mb-1">
+                  <SvgSprite name="custom-list" style="width: 12px; height: 12px" class="me-2" />
+                  <span class="text-caption">{{ cycle.tasks.length }} tarefa(s)</span>
+                </div>
+                
+                <div v-if="cycle.status === 'active'" class="d-flex align-center">
+                  <SvgSprite name="custom-alert" style="width: 12px; height: 12px" class="me-2" />
+                  <span class="text-caption">{{ getDaysRemaining(cycle.endDate) }} dias restantes</span>
+                </div>
+              </div>
+              
+              <!-- Objetivos Preview -->
+              <div v-if="cycle.goals.length > 0">
+                <p class="text-caption mb-1 font-weight-medium">Objetivos:</p>
+                <div class="d-flex flex-wrap gap-1">
+                  <v-chip 
+                    v-for="(goal, index) in cycle.goals.slice(0, 2)" 
+                    :key="index"
+                    size="x-small" 
+                    variant="tonal"
+                    :color="cycle.color"
+                  >
+                    {{ goal.length > 15 ? goal.substring(0, 15) + '...' : goal }}
+                  </v-chip>
+                  <v-chip 
+                    v-if="cycle.goals.length > 2"
+                    size="x-small" 
+                    variant="tonal"
+                    color="grey"
+                  >
+                    +{{ cycle.goals.length - 2 }}
+                  </v-chip>
+                </div>
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </UiParentCard>
+  </div>
+
+  <!-- Outros Ciclos (Planejamento, Concluídos, etc.) -->
+  <UiParentCard title="Histórico de Ciclos">
+    <v-row v-if="studyStore.studyCycles.filter(c => c.status !== 'active').length > 0">
       <v-col 
-        v-for="cycle in studyStore.studyCycles" 
+        v-for="cycle in studyStore.studyCycles.filter(c => c.status !== 'active')" 
         :key="cycle.id"
         cols="12" 
         md="6" 
         lg="4"
       >
-        <v-card class="h-100" :class="{ 'border-primary': cycle.id === studyStore.activeCycle?.id }">
+        <v-card class="h-100 cycle-card" variant="outlined">
           <v-card-text>
             <div class="d-flex align-center justify-space-between mb-3">
               <v-chip 
@@ -595,7 +953,7 @@ onMounted(() => {
                     <template v-slot:prepend>
                       <SvgSprite name="custom-eye" style="width: 16px; height: 16px" />
                     </template>
-                    <v-list-item-title>Abrir Kanban</v-list-item-title>
+                    <v-list-item-title>Visualizar</v-list-item-title>
                   </v-list-item>
                   <v-list-item 
                     v-if="cycle.status === 'planning'"
@@ -606,6 +964,7 @@ onMounted(() => {
                     </template>
                     <v-list-item-title>Ativar Ciclo</v-list-item-title>
                   </v-list-item>
+                  <v-divider />
                   <v-list-item @click="deleteCycle(cycle.id)" class="text-error">
                     <template v-slot:prepend>
                       <SvgSprite name="custom-trash" style="width: 16px; height: 16px" />
@@ -662,15 +1021,15 @@ onMounted(() => {
                 <span class="text-caption">{{ cycle.tasks.length }} tarefa(s)</span>
               </div>
               
-              <div v-if="cycle.status === 'active'" class="d-flex align-center">
-                <SvgSprite name="custom-alert" style="width: 12px; height: 12px" class="me-2" />
-                <span class="text-caption">{{ getDaysRemaining(cycle.endDate) }} dias restantes</span>
+              <div v-if="cycle.status === 'planning'" class="d-flex align-center">
+                <SvgSprite name="custom-clock" style="width: 12px; height: 12px" class="me-2" />
+                <span class="text-caption">Aguardando ativação</span>
               </div>
             </div>
             
             <!-- Objetivos -->
             <div v-if="cycle.goals.length > 0">
-              <p class="text-caption mb-1">Objetivos:</p>
+              <p class="text-caption mb-1 font-weight-medium">Objetivos:</p>
               <div class="d-flex flex-wrap gap-1">
                 <v-chip 
                   v-for="(goal, index) in cycle.goals.slice(0, 2)" 
@@ -679,7 +1038,7 @@ onMounted(() => {
                   variant="tonal"
                   :color="cycle.color"
                 >
-                  {{ goal }}
+                  {{ goal.length > 12 ? goal.substring(0, 12) + '...' : goal }}
                 </v-chip>
                 <v-chip 
                   v-if="cycle.goals.length > 2"
@@ -697,18 +1056,52 @@ onMounted(() => {
     </v-row>
     
     <div v-else class="text-center py-12">
-      <SvgSprite name="custom-refresh" style="width: 64px; height: 64px; opacity: 0.3" />
-      <h5 class="text-h5 mt-4 mb-2">Nenhum ciclo de estudo criado</h5>
-      <p class="text-subtitle-1 text-lightText mb-4">
-        Organize seus estudos em ciclos focados com objetivos claros e prazos definidos
-      </p>
-      <v-btn color="primary" prepend-icon="mdi-plus">
-        <router-link to="/main/cycles/new" class="text-decoration-none text-white">
-          Criar Primeiro Ciclo
-        </router-link>
-      </v-btn>
+      <div class="empty-state-container">
+        <v-avatar color="grey-lighten-2" size="80" class="mb-4">
+          <SvgSprite name="custom-refresh" style="width: 40px; height: 40px; opacity: 0.5" />
+        </v-avatar>
+        <h5 class="text-h5 mb-2">Nenhum ciclo de estudo criado</h5>
+        <p class="text-subtitle-1 text-lightText mb-6">
+          Ciclos são períodos focados para executar partes dos seus planos de estudo.<br>
+          Organize seus estudos em sprints com objetivos claros e prazos definidos.
+        </p>
+        
+        <div v-if="studyStore.studyPlans.length === 0" class="no-plans-warning">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            <div class="d-flex align-center">
+              <SvgSprite name="custom-info" style="width: 20px; height: 20px" class="me-2" />
+              <div>
+                <strong>Primeiro, crie um Plano de Estudo!</strong><br>
+                Os ciclos são baseados nos planos existentes. Você precisa ter pelo menos um plano criado.
+              </div>
+            </div>
+          </v-alert>
+          
+          <div class="d-flex gap-3 justify-center">
+            <v-btn color="primary" prepend-icon="mdi-calendar" size="large">
+              <router-link to="/main/plans/new" class="text-decoration-none text-white">
+                Criar Plano de Estudo
+              </router-link>
+            </v-btn>
+            <v-btn color="secondary" variant="outlined" prepend-icon="mdi-help-circle">
+              <router-link to="/main/plans" class="text-decoration-none">
+                Ver Planos Existentes
+              </router-link>
+            </v-btn>
+          </div>
+        </div>
+        
+        <div v-else>
+          <v-btn color="primary" prepend-icon="mdi-plus" size="large">
+            <router-link to="/main/cycles/new" class="text-decoration-none text-white">
+              Criar Primeiro Ciclo
+            </router-link>
+          </v-btn>
+        </div>
+      </div>
     </div>
   </UiParentCard>
+  </div>
 
   <!-- Dialog para Editar Tarefa -->
   <v-dialog v-model="taskDialog" max-width="600px" persistent>
@@ -783,6 +1176,7 @@ onMounted(() => {
       </v-card-actions>
     </v-card>
   </v-dialog>
+
   <!-- Dialog para Nova Tarefa -->
   <v-dialog v-model="newTaskDialog" max-width="500px" persistent>
     <v-card>
@@ -857,11 +1251,51 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Header Explicativo */
+.explanation-card {
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.1), rgba(var(--v-theme-primary), 0.05));
+  border: 1px solid rgba(var(--v-theme-primary), 0.2);
+}
+
+.explanation-content {
+  margin-top: 1rem;
+}
+
+.features-list {
+  background: rgba(var(--v-theme-surface), 0.8);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+.quick-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+  flex: 1;
+}
+
 /* Sprint Header */
 .sprint-header {
   background: rgba(var(--v-theme-containerBg), 0.3);
   border-radius: 12px;
   padding: 1.5rem;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+.goals-preview {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(var(--v-theme-surface), 0.6);
+  border-radius: 8px;
   border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
 }
 
@@ -889,8 +1323,13 @@ onMounted(() => {
   color: rgb(var(--v-theme-lightText));
 }
 
-/* Kanban Board */
-.kanban-board {
+.sprint-actions {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+/* Kanban Board Resumido */
+.kanban-board-summary {
   background: rgba(var(--v-theme-containerBg), 0.2);
   border-radius: 12px;
   padding: 1rem;
@@ -909,7 +1348,7 @@ onMounted(() => {
   background: rgba(var(--v-theme-surface), 0.9);
   border-radius: 12px;
   padding: 1rem;
-  min-height: 400px;
+  min-height: 300px;
   border: 2px solid rgba(var(--v-theme-borderLight), 0.3);
   transition: all 0.3s ease;
 }
@@ -944,77 +1383,133 @@ onMounted(() => {
   border-radius: 6px;
 }
 
-/* Container de Tarefas */
-.tasks-container {
-  max-height: 350px;
+/* Container de Tarefas Resumido */
+.tasks-container-summary {
+  max-height: 200px;
   overflow-y: auto;
   padding-right: 0.25rem;
 }
 
-.tasks-container::-webkit-scrollbar {
-  width: 4px;
+.tasks-container-summary::-webkit-scrollbar {
+  width: 3px;
 }
 
-.tasks-container::-webkit-scrollbar-track {
+.tasks-container-summary::-webkit-scrollbar-track {
   background: rgba(var(--v-theme-borderLight), 0.3);
   border-radius: 2px;
 }
 
-.tasks-container::-webkit-scrollbar-thumb {
+.tasks-container-summary::-webkit-scrollbar-thumb {
   background: rgba(var(--v-theme-primary), 0.5);
   border-radius: 2px;
 }
 
-/* Cards de Tarefa */
-.task-card {
-  margin-bottom: 0.75rem;
+/* Cards de Tarefa Resumidos */
+.task-card-summary {
+  margin-bottom: 0.5rem;
   cursor: pointer;
 }
 
-.task-item {
+.task-item-summary {
   transition: all 0.3s ease;
-  border-radius: 8px;
+  border-radius: 6px;
   position: relative;
 }
 
-.task-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.task-item-summary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.task-item.priority-high {
-  border-left: 3px solid rgb(var(--v-theme-error));
+.task-item-summary.priority-high {
+  border-left: 2px solid rgb(var(--v-theme-error));
 }
 
-.task-item.priority-medium {
-  border-left: 3px solid rgb(var(--v-theme-warning));
+.task-item-summary.priority-medium {
+  border-left: 2px solid rgb(var(--v-theme-warning));
 }
 
-.task-item.priority-low {
-  border-left: 3px solid rgb(var(--v-theme-success));
+.task-item-summary.priority-low {
+  border-left: 2px solid rgb(var(--v-theme-success));
 }
 
-/* Ações Rápidas */
-.quick-actions {
+.more-tasks {
+  text-align: center;
   margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(var(--v-theme-borderLight), 0.3);
 }
 
-/* Estado Vazio */
-.empty-column {
+/* Estados Vazios */
+.empty-column-summary {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 120px;
-  border: 2px dashed rgba(var(--v-theme-borderLight), 0.5);
-  border-radius: 8px;
+  min-height: 80px;
+  border: 1px dashed rgba(var(--v-theme-borderLight), 0.5);
+  border-radius: 6px;
   background: rgba(var(--v-theme-containerBg), 0.2);
 }
 
-.empty-state {
+.empty-state-summary {
   text-align: center;
+  padding: 0.5rem;
+}
+
+/* Cards de Ciclo */
+.cycle-card {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+}
+
+.cycle-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.active-cycle-card {
+  border: 2px solid rgba(var(--v-theme-success), 0.3);
+  box-shadow: 0 4px 16px rgba(var(--v-theme-success), 0.1);
+}
+
+.active-border {
+  border: 2px solid rgba(var(--v-theme-success), 0.5) !important;
+}
+
+.completed-card {
+  opacity: 0.8;
+}
+
+.cycle-quick-stats {
+  background: rgba(var(--v-theme-containerBg), 0.3);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+.cycle-info {
+  background: rgba(var(--v-theme-surface), 0.5);
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+
+/* Filtros de Status */
+.status-filters {
+  background: rgba(var(--v-theme-containerBg), 0.3);
   padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+/* Estado Vazio Melhorado */
+.empty-state-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.no-plans-warning {
+  background: rgba(var(--v-theme-info), 0.05);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-info), 0.2);
 }
 
 /* Responsividade */
@@ -1025,11 +1520,67 @@ onMounted(() => {
   
   .kanban-column {
     padding: 0.75rem;
-    min-height: 300px;
+    min-height: 250px;
   }
   
-  .tasks-container {
-    max-height: 250px;
+  .tasks-container-summary {
+    max-height: 150px;
   }
+  
+  .quick-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .explanation-content .features-list {
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .sprint-header {
+    padding: 1rem;
+  }
+  
+  .explanation-card .v-card-text {
+    padding: 1rem !important;
+  }
+  
+  .cycle-quick-stats {
+    padding: 0.5rem;
+  }
+}
+
+/* Animações */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-card-summary {
+  animation: slideIn 0.3s ease-out;
+}
+
+.cycle-card {
+  animation: slideIn 0.4s ease-out;
+}
+
+/* Melhorias visuais */
+.v-chip {
+  transition: all 0.3s ease;
+}
+
+.v-chip:hover {
+  transform: translateY(-1px);
+}
+
+.v-progress-linear {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 </style>
