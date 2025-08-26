@@ -8,6 +8,8 @@ export const useStudyStore = defineStore('study', {
     tasks: [] as Task[],
     studyPlans: [] as StudyPlan[],
     activeStudyPlan: null as StudyPlan | null,
+    studyCycles: [] as StudyCycle[],
+    activeCycle: null as StudyCycle | null,
     currentSession: null as StudySession | null,
     sessionTimer: 0,
     isStudying: false
@@ -250,6 +252,40 @@ export const useStudyStore = defineStore('study', {
       
       return Math.min((passedDays / totalDays) * 100, 100);
     },
+
+    getCycleStats: (state) => {
+      const totalCycles = state.studyCycles.length;
+      const activeCycles = state.studyCycles.filter(c => c.status === 'active').length;
+      const completedCycles = state.studyCycles.filter(c => c.status === 'completed').length;
+      const totalHours = state.studyCycles.reduce((total, cycle) => total + cycle.totalHours, 0);
+      const completedHours = state.studyCycles.reduce((total, cycle) => total + cycle.completedHours, 0);
+      const averageCompletion = totalHours > 0 ? (completedHours / totalHours) * 100 : 0;
+
+      return {
+        totalCycles,
+        activeCycles,
+        completedCycles,
+        totalHours,
+        completedHours,
+        averageCompletion
+      };
+    },
+
+    getCycleById: (state) => (id: string) => {
+      return state.studyCycles.find(cycle => cycle.id === id);
+    },
+
+    getActiveCycles: (state) => {
+      return state.studyCycles.filter(cycle => cycle.status === 'active');
+    },
+
+    getCycleProgress: (state) => (cycleId: string) => {
+      const cycle = state.studyCycles.find(c => c.id === cycleId);
+      if (!cycle) return 0;
+      
+      return cycle.totalHours > 0 ? (cycle.completedHours / cycle.totalHours) * 100 : 0;
+    },
+
     // Study Cycles
     addStudyCycle(cycle: Omit<StudyCycle, 'id' | 'createdAt' | 'updatedAt'>) {
       const newCycle: StudyCycle = {
@@ -347,6 +383,7 @@ export const useStudyStore = defineStore('study', {
         }
       }
     },
+
     // Local Storage
     saveToLocalStorage() {
       localStorage.setItem('study-data', JSON.stringify({
