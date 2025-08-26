@@ -502,73 +502,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Coluna: Revisão -->
-      <div 
-        class="kanban-column review-column"
-        @drop="onDrop($event, 'review')"
-        @dragover="onDragOver"
-      >
-        <div class="column-header">
-          <div class="d-flex align-center">
-            <v-avatar color="warning" size="32" class="me-3">
-              <SvgSprite name="custom-refresh" style="width: 16px; height: 16px" />
-            </v-avatar>
-            <div>
-              <h5 class="text-h5 mb-0">Revisão</h5>
-              <p class="text-caption mb-0">{{ reviewSubjects.length }} disciplinas</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="column-content">
-          <div
-            v-for="subject in reviewSubjects"
-            :key="subject.id"
-            class="subject-card review-card"
-            draggable="true"
-            @dragstart="onDragStart($event, subject)"
-          >
-            <div class="review-urgency-bar" :class="`urgency-${subject.reviewType}`"></div>
-            
-            <div class="card-header">
-              <h6 class="text-h6 mb-1">{{ subject.name }}</h6>
-              <v-chip 
-                :color="getReviewUrgencyColor(subject.reviewType)" 
-                size="x-small" 
-                variant="tonal"
-              >
-                {{ subject.reviewType === '24h' ? '24h' : subject.reviewType === '7d' ? '7 dias' : '30 dias' }}
-              </v-chip>
-            </div>
-            
-            <div class="card-content">
-              <p class="text-caption text-lightText mb-2">
-                Estudado: {{ formatMinutes(subject.actualMinutes) }}
-              </p>
-              <p v-if="subject.reviewDate" class="text-caption">
-                Revisar até: {{ new Date(subject.reviewDate).toLocaleDateString() }}
-              </p>
-            </div>
-            
-            <div class="card-actions">
-              <v-btn 
-                size="small" 
-                color="warning" 
-                variant="flat"
-                @click="startStudy(subject)"
-                block
-              >
-                Revisar Agora
-              </v-btn>
-            </div>
-          </div>
-          
-          <div v-if="reviewSubjects.length === 0" class="empty-column">
-            <SvgSprite name="custom-refresh" style="width: 32px; height: 32px; opacity: 0.3" />
-            <p class="text-caption text-lightText mt-2 mb-0">Nenhuma revisão pendente</p>
-          </div>
-        </div>
-      </div>
 
       <!-- Coluna: Concluído -->
       <div 
@@ -627,10 +560,10 @@ onUnmounted(() => {
                 size="small" 
                 color="info" 
                 variant="outlined"
-                @click="moveToReview(subject)"
+                @click="startStudy(subject)"
                 block
               >
-                Revisar Novamente
+                Estudar Novamente
               </v-btn>
             </div>
           </div>
@@ -824,7 +757,7 @@ onUnmounted(() => {
 /* Kanban Board */
 .kanban-board {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr 1fr;
+  grid-template-columns: 1fr 1.5fr 1fr;
   gap: 1.5rem;
   height: calc(100vh - 300px);
 }
@@ -893,43 +826,6 @@ onUnmounted(() => {
 .completed-card {
   border-left-color: #10b981;
   opacity: 0.9;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-}
-
-.card-content {
-  margin-bottom: 1rem;
-}
-
-.card-actions {
-  margin-top: auto;
-}
-
-/* Review Cards */
-.review-urgency-bar {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 4px;
-  height: 100%;
-  border-radius: 0 12px 12px 0;
-}
-
-.urgency-24h {
-  background: #3b82f6;
-}
-
-.urgency-7d {
-  background: #f59e0b;
-}
-
-.urgency-30d {
-  background: #ef4444;
 }
 
 /* Study Card Expandida */
