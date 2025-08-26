@@ -1235,4 +1235,3 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 </style>
-</template>
