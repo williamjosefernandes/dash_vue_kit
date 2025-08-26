@@ -164,7 +164,7 @@ onMounted(() => {
                     <template v-slot:prepend>
                       <SvgSprite name="custom-eye" style="width: 16px; height: 16px" />
                     </template>
-                    <v-list-item-title>Ver Detalhes</v-list-item-title>
+                    <v-list-item-title>Abrir Kanban</v-list-item-title>
                   </v-list-item>
                   <v-list-item 
                     v-if="cycle.status === 'planning'"
