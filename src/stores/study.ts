@@ -81,6 +81,24 @@ export const useStudyStore = defineStore('study', {
 
     getCyclesByPlan: (state) => (planId: string) => {
       return state.studyCycles.filter(cycle => cycle.planId === planId);
+    },
+
+    getStudyPlanById: (state) => (id: string) => {
+      return state.studyPlans.find(plan => plan.id === id);
+    },
+
+    getActivePlans: (state) => {
+      return state.studyPlans.filter(plan => plan.status === 'active');
+    },
+
+    getPlanProgress: (state) => (planId: string) => {
+      const plan = state.studyPlans.find(p => p.id === planId);
+      if (!plan) return 0;
+      
+      const totalDays = Math.ceil((new Date(plan.endDate).getTime() - new Date(plan.startDate).getTime()) / (1000 * 60 * 60 * 24));
+      const passedDays = Math.ceil((new Date().getTime() - new Date(plan.startDate).getTime()) / (1000 * 60 * 60 * 24));
+      
+      return Math.min((passedDays / totalDays) * 100, 100);
     }
   },
 
@@ -249,24 +267,6 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
-    getStudyPlanById: (state) => (id: string) => {
-      return state.studyPlans.find(plan => plan.id === id);
-    },
-
-    getActivePlans: (state) => {
-      return state.studyPlans.filter(plan => plan.status === 'active');
-    },
-
-    getPlanProgress: (state) => (planId: string) => {
-      const plan = state.studyPlans.find(p => p.id === planId);
-      if (!plan) return 0;
-      
-      const totalDays = Math.ceil((new Date(plan.endDate).getTime() - new Date(plan.startDate).getTime()) / (1000 * 60 * 60 * 24));
-      const passedDays = Math.ceil((new Date().getTime() - new Date(plan.startDate).getTime()) / (1000 * 60 * 60 * 24));
-      
-      return Math.min((passedDays / totalDays) * 100, 100);
-    },
-
     // Study Cycles
     addStudyCycle(cycle: Omit<StudyCycle, 'id' | 'createdAt' | 'updatedAt'>) {
       const newCycle: StudyCycle = {
@@ -345,18 +345,6 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
-    getCycleById: (state) => (id: string) => {
-      return state.studyCycles.find(cycle => cycle.id === id);
-    },
-
-    getActiveCycles: (state) => {
-      return state.studyCycles.filter(cycle => cycle.status === 'active');
-    },
-
-    getCyclesByPlan: (state) => (planId: string) => {
-      return state.studyCycles.filter(cycle => cycle.planId === planId);
-    },
-
     // Local Storage
     saveToLocalStorage() {
       localStorage.setItem('study-data', JSON.stringify({
@@ -365,6 +353,8 @@ export const useStudyStore = defineStore('study', {
         tasks: this.tasks,
         studyPlans: this.studyPlans,
         activeStudyPlan: this.activeStudyPlan,
+        studyCycles: this.studyCycles,
+        activeCycle: this.activeCycle,
         studyCycles: this.studyCycles,
         activeCycle: this.activeCycle,
       }));
@@ -398,6 +388,31 @@ export const useStudyStore = defineStore('study', {
           updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : new Date()
         }));
         this.activeStudyPlan = parsed.activeStudyPlan || null;
+        this.studyCycles = (parsed.studyCycles || []).map((cycle: any) => ({
+          ...cycle,
+          startDate: cycle.startDate ? new Date(cycle.startDate) : new Date(),
+          endDate: cycle.endDate ? new Date(cycle.endDate) : new Date(),
+          totalHours: cycle.totalHours || 0,
+          completedHours: cycle.completedHours || 0,
+          objectives: cycle.objectives || [],
+          tasks: (cycle.tasks || []).map((task: any) => ({
+            ...task,
+            estimatedHours: task.estimatedHours || 0,
+            actualHours: task.actualHours || 0,
+            dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+            createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
+            updatedAt: task.updatedAt ? new Date(task.updatedAt) : new Date()
+          })),
+          createdAt: cycle.createdAt ? new Date(cycle.createdAt) : new Date(),
+          updatedAt: cycle.updatedAt ? new Date(cycle.updatedAt) : new Date()
+        }));
+        this.activeCycle = parsed.activeCycle ? {
+          ...parsed.activeCycle,
+          startDate: new Date(parsed.activeCycle.startDate),
+          endDate: new Date(parsed.activeCycle.endDate),
+          createdAt: new Date(parsed.activeCycle.createdAt),
+          updatedAt: new Date(parsed.activeCycle.updatedAt)
+        } : null;
         this.studyCycles = (parsed.studyCycles || []).map((cycle: any) => ({
           ...cycle,
           startDate: cycle.startDate ? new Date(cycle.startDate) : new Date(),
