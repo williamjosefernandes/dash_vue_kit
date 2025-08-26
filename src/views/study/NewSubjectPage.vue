@@ -314,19 +314,45 @@ onMounted(() => {
                   </small>
                 </div>
               </div>
-              <div class="d-flex flex-wrap gap-2">
-                <v-btn
-                  v-for="color in colors"
-                  :key="color.value"
-                  :color="color.value"
-                  :variant="subjectData.color === color.value ? 'flat' : 'outlined'"
-                  size="large"
-                  class="color-btn"
-                  @click="subjectData.color = color.value"
-                >
-                  <v-avatar :color="color.value" size="20" class="me-2"></v-avatar>
-                  {{ color.name }}
-                </v-btn>
+              <div class="color-selection-container">
+                <div class="color-grid">
+                  <div
+                    v-for="color in colors"
+                    :key="color.value"
+                    class="color-option"
+                    :class="{ 'selected': subjectData.color === color.value }"
+                    @click="subjectData.color = color.value"
+                  >
+                    <div class="color-circle" :style="{ backgroundColor: color.color }">
+                      <v-icon 
+                        v-if="subjectData.color === color.value"
+                        icon="mdi-check"
+                        color="white"
+                        size="20"
+                      />
+                    </div>
+                    <span class="color-name">{{ color.name }}</span>
+                  </div>
+                </div>
+                
+                <!-- Preview da Cor Selecionada -->
+                <div class="color-preview-section mt-4">
+                  <div class="color-preview-card" :style="{ borderColor: colors.find(c => c.value === subjectData.color)?.color }">
+                    <div class="d-flex align-center">
+                      <div 
+                        class="preview-circle me-3" 
+                        :style="{ backgroundColor: colors.find(c => c.value === subjectData.color)?.color }"
+                      ></div>
+                      <div>
+                        <h6 class="text-h6 mb-1">Cor Selecionada</h6>
+                        <p class="text-caption text-lightText mb-0">
+                          {{ colors.find(c => c.value === subjectData.color)?.name }} - 
+                          {{ colors.find(c => c.value === subjectData.color)?.color }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </v-col>
           </v-row>
@@ -983,16 +1009,98 @@ onMounted(() => {
 }
 
 /* Botões de Cor */
-.color-btn {
-  min-width: 120px;
+.color-selection-container {
+  padding: 1.5rem;
+  background: rgba(var(--v-theme-containerBg), 0.3);
+  border-radius: 16px;
+  border: 2px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.color-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(var(--v-theme-surface), 0.8);
+  border: 2px solid transparent;
+}
+
+.color-option:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  background: rgba(var(--v-theme-surface), 1);
+}
+
+.color-option.selected {
+  border-color: rgba(var(--v-theme-primary), 0.5);
+  background: rgba(var(--v-theme-primary), 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(var(--v-theme-primary), 0.2);
+}
+
+.color-circle {
+  width: 48px;
   height: 48px;
-  border-radius: 12px !important;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.color-option:hover .color-circle {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.color-option.selected .color-circle {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.color-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--v-theme-darkText));
+  transition: color 0.3s ease;
+}
+
+.color-option.selected .color-name {
+  color: rgb(var(--v-theme-primary));
+  font-weight: 600;
+}
+
+.color-preview-section {
+  border-top: 1px solid rgba(var(--v-theme-borderLight), 0.5);
+  padding-top: 1rem;
+}
+
+.color-preview-card {
+  padding: 1rem;
+  background: rgba(var(--v-theme-surface), 0.8);
+  border-radius: 12px;
+  border: 2px solid;
   transition: all 0.3s ease;
 }
 
-.color-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.preview-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Barra de Ações */
