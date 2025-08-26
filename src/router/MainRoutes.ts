@@ -32,6 +32,21 @@ const MainRoutes = {
       component: () => import('@/views/study/NewPlanPage.vue')
     },
     {
+      name: 'Cycles',
+      path: '/main/cycles',
+      component: () => import('@/views/study/CyclesPage.vue')
+    },
+    {
+      name: 'NewCycle',
+      path: '/main/cycles/new',
+      component: () => import('@/views/study/NewCyclePage.vue')
+    },
+    {
+      name: 'CycleDetail',
+      path: '/main/cycles/:id',
+      component: () => import('@/views/study/CycleDetailPage.vue')
+    },
+    {
       name: 'Tasks',
       path: '/main/tasks',
       component: () => import('@/views/study/TasksPage.vue')

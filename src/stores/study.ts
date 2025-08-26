@@ -250,6 +250,103 @@ export const useStudyStore = defineStore('study', {
       
       return Math.min((passedDays / totalDays) * 100, 100);
     },
+    // Study Cycles
+    addStudyCycle(cycle: Omit<StudyCycle, 'id' | 'createdAt' | 'updatedAt'>) {
+      const newCycle: StudyCycle = {
+        ...cycle,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.studyCycles.push(newCycle);
+      this.saveToLocalStorage();
+    },
+
+    updateStudyCycle(id: string, updates: Partial<StudyCycle>) {
+      const index = this.studyCycles.findIndex(cycle => cycle.id === id);
+      if (index !== -1) {
+        this.studyCycles[index] = {
+          ...this.studyCycles[index],
+          ...updates,
+          updatedAt: new Date()
+        };
+        this.saveToLocalStorage();
+      }
+    },
+
+    deleteStudyCycle(id: string) {
+      this.studyCycles = this.studyCycles.filter(cycle => cycle.id !== id);
+      if (this.activeCycle?.id === id) {
+        this.activeCycle = null;
+      }
+      this.saveToLocalStorage();
+    },
+
+    setActiveCycle(cycleId: string) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        this.activeCycle = cycle;
+        this.saveToLocalStorage();
+      }
+    },
+
+    addCycleTask(cycleId: string, task: Omit<CycleTask, 'id' | 'cycleId'>) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        const newTask: CycleTask = {
+          ...task,
+          id: Date.now().toString(),
+          cycleId
+        };
+        cycle.tasks.push(newTask);
+        this.saveToLocalStorage();
+      }
+    },
+
+    updateCycleTask(cycleId: string, taskId: string, updates: Partial<CycleTask>) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        const taskIndex = cycle.tasks.findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+          cycle.tasks[taskIndex] = { ...cycle.tasks[taskIndex], ...updates };
+          
+          // Atualizar horas completadas do ciclo
+          cycle.completedHours = cycle.tasks
+            .filter(t => t.status === 'done')
+            .reduce((total, t) => total + t.actualHours, 0);
+          
+          this.saveToLocalStorage();
+        }
+      }
+    },
+
+    deleteCycleTask(cycleId: string, taskId: string) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        cycle.tasks = cycle.tasks.filter(t => t.id !== taskId);
+        this.saveToLocalStorage();
+      }
+    },
+
+    moveCycleTask(cycleId: string, taskId: string, newStatus: CycleTask['status']) {
+      const cycle = this.studyCycles.find(c => c.id === cycleId);
+      if (cycle) {
+        const task = cycle.tasks.find(t => t.id === taskId);
+        if (task) {
+          task.status = newStatus;
+          if (newStatus === 'done' && !task.completedDate) {
+            task.completedDate = new Date();
+          }
+          
+          // Atualizar horas completadas do ciclo
+          cycle.completedHours = cycle.tasks
+            .filter(t => t.status === 'done')
+            .reduce((total, t) => total + t.actualHours, 0);
+          
+          this.saveToLocalStorage();
+        }
+      }
+    },
     // Local Storage
     saveToLocalStorage() {
       localStorage.setItem('study-data', JSON.stringify({
@@ -257,7 +354,9 @@ export const useStudyStore = defineStore('study', {
         studySessions: this.studySessions,
         tasks: this.tasks,
         studyPlans: this.studyPlans,
-        activeStudyPlan: this.activeStudyPlan
+        activeStudyPlan: this.activeStudyPlan,
+        studyCycles: this.studyCycles,
+        activeCycle: this.activeCycle
       }));
     },
 
@@ -270,6 +369,8 @@ export const useStudyStore = defineStore('study', {
         this.tasks = parsed.tasks || [];
         this.studyPlans = parsed.studyPlans || [];
         this.activeStudyPlan = parsed.activeStudyPlan || null;
+        this.studyCycles = parsed.studyCycles || [];
+        this.activeCycle = parsed.activeCycle || null;
       }
     }
   }
