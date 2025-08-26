@@ -39,7 +39,24 @@ export interface StudyPlan {
   endDate: Date;
   subjects: string[]; // IDs das disciplinas
   dailyGoal: number; // horas por dia
+  weeklyGoal: number; // horas por semana
+  status: 'active' | 'paused' | 'completed' | 'draft';
+  color: string;
+  priority: 'low' | 'medium' | 'high';
   active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PlanSession {
+  id: string;
+  planId: string;
+  subjectId: string;
+  date: Date;
+  plannedHours: number;
+  actualHours: number;
+  completed: boolean;
+  notes?: string;
 }
 
 export interface StudyStats {

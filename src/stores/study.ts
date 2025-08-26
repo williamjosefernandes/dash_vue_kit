@@ -196,9 +196,31 @@ export const useStudyStore = defineStore('study', {
     addStudyPlan(plan: Omit<StudyPlan, 'id'>) {
       const newPlan: StudyPlan = {
         ...plan,
-        id: Date.now().toString()
+        id: Date.now().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       this.studyPlans.push(newPlan);
+      this.saveToLocalStorage();
+    },
+
+    updateStudyPlan(id: string, updates: Partial<StudyPlan>) {
+      const index = this.studyPlans.findIndex(plan => plan.id === id);
+      if (index !== -1) {
+        this.studyPlans[index] = {
+          ...this.studyPlans[index],
+          ...updates,
+          updatedAt: new Date()
+        };
+        this.saveToLocalStorage();
+      }
+    },
+
+    deleteStudyPlan(id: string) {
+      this.studyPlans = this.studyPlans.filter(plan => plan.id !== id);
+      if (this.activeStudyPlan?.id === id) {
+        this.activeStudyPlan = null;
+      }
       this.saveToLocalStorage();
     },
 
@@ -210,6 +232,23 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
+    getStudyPlanById: (state) => (id: string) => {
+      return state.studyPlans.find(plan => plan.id === id);
+    },
+
+    getActivePlans: (state) => {
+      return state.studyPlans.filter(plan => plan.status === 'active');
+    },
+
+    getPlanProgress: (state) => (planId: string) => {
+      const plan = state.studyPlans.find(p => p.id === planId);
+      if (!plan) return 0;
+      
+      const totalDays = Math.ceil((new Date(plan.endDate).getTime() - new Date(plan.startDate).getTime()) / (1000 * 60 * 60 * 24));
+      const passedDays = Math.ceil((new Date().getTime() - new Date(plan.startDate).getTime()) / (1000 * 60 * 60 * 24));
+      
+      return Math.min((passedDays / totalDays) * 100, 100);
+    },
     // Local Storage
     saveToLocalStorage() {
       localStorage.setItem('study-data', JSON.stringify({
