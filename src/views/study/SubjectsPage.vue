@@ -12,7 +12,10 @@ const breadcrumbs = ref([
   { title: 'Disciplinas', disabled: true, href: '#' }
 ]);
 
+const form = ref();
+const valid = ref(false);
 const dialog = ref(false);
+const deleteDialog = ref(false);
 const editMode = ref(false);
 const currentSubject = ref({
   id: '',
@@ -22,6 +25,7 @@ const currentSubject = ref({
   totalHours: 0,
   studiedHours: 0
 });
+const subjectToDelete = ref<any>(null);
 
 const colors = [
   { name: 'Azul', value: 'primary' },
@@ -56,6 +60,8 @@ const openDialog = (subject?: any) => {
 };
 
 const saveSubject = () => {
+  if (!form.value.validate()) return;
+  
   if (editMode.value) {
     studyStore.updateSubject(currentSubject.value.id, currentSubject.value);
   } else {
@@ -64,9 +70,16 @@ const saveSubject = () => {
   dialog.value = false;
 };
 
-const deleteSubject = (id: string) => {
-  if (confirm('Tem certeza que deseja excluir esta disciplina? Todas as tarefas e sessões relacionadas também serão excluídas.')) {
-    studyStore.deleteSubject(id);
+const openDeleteDialog = (subject: any) => {
+  subjectToDelete.value = subject;
+  deleteDialog.value = true;
+};
+
+const confirmDelete = () => {
+  if (subjectToDelete.value) {
+    studyStore.deleteSubject(subjectToDelete.value.id);
+    deleteDialog.value = false;
+    subjectToDelete.value = null;
   }
 };
 
@@ -124,7 +137,7 @@ const formatHours = (hours: number) => {
                     </template>
                     <v-list-item-title>Editar</v-list-item-title>
                   </v-list-item>
-                  <v-list-item @click="deleteSubject(subject.id)" class="text-error">
+                  <v-list-item @click="openDeleteDialog(subject)" class="text-error">
                     <template v-slot:prepend>
                       <SvgSprite name="custom-trash" style="width: 16px; height: 16px" />
                     </template>
@@ -186,7 +199,7 @@ const formatHours = (hours: number) => {
       </v-card-title>
       
       <v-card-text class="pa-6">
-        <v-form>
+        <v-form ref="form" v-model="valid">
           <div class="mb-4">
             <v-label class="mb-2">Nome da Disciplina *</v-label>
             <v-text-field
@@ -261,10 +274,76 @@ const formatHours = (hours: number) => {
         <v-btn 
           color="primary" 
           @click="saveSubject"
-          :disabled="!currentSubject.name"
+          :disabled="!valid"
           variant="flat"
         >
           {{ editMode ? 'Salvar Alterações' : 'Criar Disciplina' }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Dialog de Confirmação de Exclusão -->
+  <v-dialog v-model="deleteDialog" max-width="500px" persistent>
+    <v-card class="dialog-card">
+      <v-card-title class="dialog-header text-error">
+        <div class="d-flex align-center">
+          <v-avatar color="error" size="32" class="me-3">
+            <SvgSprite name="custom-trash" style="width: 16px; height: 16px" />
+          </v-avatar>
+          <span>Excluir Disciplina</span>
+        </div>
+      </v-card-title>
+      
+      <v-card-text class="pa-6">
+        <div class="text-center mb-4">
+          <v-avatar :color="subjectToDelete?.color || 'error'" size="64" class="mb-4">
+            <SvgSprite name="custom-book" style="width: 32px; height: 32px" />
+          </v-avatar>
+          
+          <h5 class="text-h5 mb-2">{{ subjectToDelete?.name }}</h5>
+          <p class="text-subtitle-1 text-lightText mb-4">
+            Tem certeza que deseja excluir esta disciplina?
+          </p>
+        </div>
+        
+        <v-alert type="warning" variant="tonal" class="mb-4">
+          <div class="text-body-2">
+            <strong>Atenção:</strong> Esta ação não pode ser desfeita e irá excluir:
+            <ul class="mt-2 ml-4">
+              <li>Todas as tarefas relacionadas a esta disciplina</li>
+              <li>Todas as sessões de estudo registradas</li>
+              <li>Todo o progresso e estatísticas</li>
+            </ul>
+          </div>
+        </v-alert>
+        
+        <div class="d-flex align-center justify-center">
+          <div class="text-center">
+            <div class="d-flex align-center mb-2">
+              <SvgSprite name="custom-clock" style="width: 16px; height: 16px" class="me-2" />
+              <span class="text-body-2">{{ formatHours(subjectToDelete?.studiedHours || 0) }} estudadas</span>
+            </div>
+            <div class="d-flex align-center">
+              <SvgSprite name="custom-target" style="width: 16px; height: 16px" class="me-2" />
+              <span class="text-body-2">{{ formatHours(subjectToDelete?.totalHours || 0) }} planejadas</span>
+            </div>
+          </div>
+        </div>
+      </v-card-text>
+      
+      <v-card-actions class="pa-6 pt-0">
+        <v-spacer />
+        <v-btn @click="deleteDialog = false; subjectToDelete = null;" variant="outlined">
+          Cancelar
+        </v-btn>
+        <v-btn 
+          color="error" 
+          @click="confirmDelete"
+          variant="flat"
+          prepend-icon="mdi-delete"
+        >
+          Excluir Disciplina
         </v-btn>
       </v-card-actions>
     </v-card>
