@@ -17,6 +17,11 @@ const MainRoutes = {
       component: () => import('@/views/study/SubjectsPage.vue')
     },
     {
+      name: 'NewSubject',
+      path: '/main/subjects/new',
+      component: () => import('@/views/study/NewSubjectPage.vue')
+    },
+    {
       name: 'Plans',
       path: '/main/plans',
       component: () => import('@/views/study/PlansPage.vue')

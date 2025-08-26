@@ -70,9 +70,10 @@ export const useStudyStore = defineStore('study', {
 
   actions: {
     // Subjects
-    addSubject(subject: Omit<Subject, 'id' | 'createdAt' | 'updatedAt'>) {
+    addSubject(subject: Omit<Subject, 'id' | 'createdAt' | 'updatedAt' | 'topics'> & { topics?: any[] }) {
       const newSubject: Subject = {
         ...subject,
+        topics: subject.topics || [],
         id: Date.now().toString(),
         createdAt: new Date(),
         updatedAt: new Date()

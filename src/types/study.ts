@@ -5,8 +5,30 @@ export interface Subject {
   color: string;
   totalHours: number;
   studiedHours: number;
+  topics: Topic[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Topic {
+  id: string;
+  name: string;
+  description?: string;
+  estimatedHours: number;
+  studiedHours: number;
+  completed: boolean;
+  subtopics: Subtopic[];
+  order: number;
+}
+
+export interface Subtopic {
+  id: string;
+  name: string;
+  description?: string;
+  estimatedHours: number;
+  studiedHours: number;
+  completed: boolean;
+  order: number;
 }
 
 export interface StudySession {

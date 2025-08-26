@@ -84,8 +84,10 @@ const formatHours = (hours: number) => {
   
   <UiParentCard title="Minhas Disciplinas">
     <template v-slot:action>
-      <v-btn color="primary" @click="openDialog()" prepend-icon="mdi-plus">
-        Nova Disciplina
+      <v-btn color="primary" prepend-icon="mdi-plus">
+        <router-link to="/main/subjects/new" class="text-decoration-none text-white">
+          Nova Disciplina
+        </router-link>
       </v-btn>
     </template>
 
@@ -158,70 +160,11 @@ const formatHours = (hours: number) => {
       <p class="text-subtitle-1 text-lightText mb-4">
         Comece adicionando suas disciplinas para organizar seus estudos
       </p>
-      <v-btn color="primary" @click="openDialog()" prepend-icon="mdi-plus">
-        Adicionar Primeira Disciplina
+      <v-btn color="primary" prepend-icon="mdi-plus">
+        <router-link to="/main/subjects/new" class="text-decoration-none text-white">
+          Adicionar Primeira Disciplina
+        </router-link>
       </v-btn>
     </div>
   </UiParentCard>
-
-  <!-- Dialog para Adicionar/Editar Disciplina -->
-  <v-dialog v-model="dialog" max-width="500px">
-    <v-card>
-      <v-card-title>
-        {{ editMode ? 'Editar Disciplina' : 'Nova Disciplina' }}
-      </v-card-title>
-      
-      <v-card-text>
-        <v-form>
-          <v-text-field
-            v-model="currentSubject.name"
-            label="Nome da Disciplina"
-            :rules="[rules.required]"
-            variant="outlined"
-            class="mb-4"
-          />
-          
-          <v-textarea
-            v-model="currentSubject.description"
-            label="Descrição"
-            variant="outlined"
-            rows="3"
-            class="mb-4"
-          />
-          
-          <v-text-field
-            v-model.number="currentSubject.totalHours"
-            label="Total de Horas Planejadas"
-            type="number"
-            :rules="[rules.required, rules.minHours]"
-            variant="outlined"
-            class="mb-4"
-          />
-          
-          <div class="mb-4">
-            <v-label class="mb-2">Cor da Disciplina</v-label>
-            <v-chip-group v-model="currentSubject.color" mandatory>
-              <v-chip
-                v-for="color in colors"
-                :key="color.value"
-                :value="color.value"
-                :color="color.value"
-                variant="tonal"
-              >
-                {{ color.name }}
-              </v-chip>
-            </v-chip-group>
-          </div>
-        </v-form>
-      </v-card-text>
-      
-      <v-card-actions>
-        <v-spacer />
-        <v-btn @click="dialog = false">Cancelar</v-btn>
-        <v-btn color="primary" @click="saveSubject">
-          {{ editMode ? 'Salvar' : 'Adicionar' }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 </template>
