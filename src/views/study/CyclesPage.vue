@@ -206,18 +206,6 @@ const getPlanName = (planId: string) => {
   return plan?.name || 'Plano não encontrado';
 };
 
-const getCycleProgress = (cycle: any) => {
-  return cycle.totalHours > 0 ? (cycle.completedHours / cycle.totalHours) * 100 : 0;
-};
-
-const getDaysRemaining = (endDate: Date) => {
-  const now = new Date();
-  const end = new Date(endDate);
-  const diff = end.getTime() - now.getTime();
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-  return days > 0 ? days : 0;
-};
-
 const deleteCycle = (id: string) => {
   if (confirm('Tem certeza que deseja excluir este ciclo?')) {
     studyStore.deleteStudyCycle(id);
