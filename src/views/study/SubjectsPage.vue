@@ -84,11 +84,16 @@ const formatHours = (hours: number) => {
   
   <UiParentCard title="Minhas Disciplinas">
     <template v-slot:action>
-      <v-btn color="primary" prepend-icon="mdi-plus">
-        <router-link to="/main/subjects/new" class="text-decoration-none text-white">
+      <div class="d-flex gap-2">
+        <v-btn color="primary" @click="openDialog()" prepend-icon="mdi-plus">
           Nova Disciplina
-        </router-link>
-      </v-btn>
+        </v-btn>
+        <v-btn color="secondary" variant="outlined" prepend-icon="mdi-plus">
+          <router-link to="/main/subjects/new" class="text-decoration-none">
+            Criar Avançada
+          </router-link>
+        </v-btn>
+      </div>
     </template>
 
     <v-row v-if="studyStore.subjects.length > 0">
@@ -167,4 +172,179 @@ const formatHours = (hours: number) => {
       </v-btn>
     </div>
   </UiParentCard>
+
+  <!-- Dialog para Adicionar/Editar Disciplina -->
+  <v-dialog v-model="dialog" max-width="600px" persistent>
+    <v-card class="dialog-card">
+      <v-card-title class="dialog-header">
+        <div class="d-flex align-center">
+          <v-avatar :color="currentSubject.color" size="32" class="me-3">
+            <SvgSprite name="custom-book" style="width: 16px; height: 16px" />
+          </v-avatar>
+          <span>{{ editMode ? 'Editar Disciplina' : 'Nova Disciplina' }}</span>
+        </div>
+      </v-card-title>
+      
+      <v-card-text class="pa-6">
+        <v-form>
+          <div class="mb-4">
+            <v-label class="mb-2">Nome da Disciplina *</v-label>
+            <v-text-field
+              v-model="currentSubject.name"
+              :rules="[rules.required]"
+              variant="outlined"
+              placeholder="Ex: Matemática, Física, História..."
+              density="comfortable"
+              hide-details="auto"
+            />
+          </div>
+          
+          <div class="mb-4">
+            <v-label class="mb-2">Descrição</v-label>
+            <v-textarea
+              v-model="currentSubject.description"
+              variant="outlined"
+              rows="3"
+              placeholder="Descreva os objetivos e conteúdo desta disciplina..."
+              density="comfortable"
+              hide-details="auto"
+            />
+          </div>
+          
+          <div class="mb-4">
+            <v-label class="mb-2">Horas Totais Planejadas</v-label>
+            <v-text-field
+              v-model.number="currentSubject.totalHours"
+              type="number"
+              :rules="[rules.minHours]"
+              variant="outlined"
+              min="0"
+              step="0.5"
+              placeholder="0"
+              density="comfortable"
+              hide-details="auto"
+            />
+          </div>
+          
+          <div class="mb-4">
+            <v-label class="mb-2">Cor da Disciplina</v-label>
+            <div class="color-selection mt-3">
+              <div class="color-grid">
+                <div
+                  v-for="color in colors"
+                  :key="color.value"
+                  class="color-option"
+                  :class="{ 'selected': currentSubject.color === color.value }"
+                  @click="currentSubject.color = color.value"
+                >
+                  <div class="color-circle" :style="{ backgroundColor: color.color }">
+                    <v-icon 
+                      v-if="currentSubject.color === color.value"
+                      icon="mdi-check"
+                      color="white"
+                      size="16"
+                    />
+                  </div>
+                  <span class="color-name">{{ color.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </v-form>
+      </v-card-text>
+      
+      <v-card-actions class="pa-6 pt-0">
+        <v-spacer />
+        <v-btn @click="dialog = false" variant="outlined">
+          Cancelar
+        </v-btn>
+        <v-btn 
+          color="primary" 
+          @click="saveSubject"
+          :disabled="!currentSubject.name"
+          variant="flat"
+        >
+          {{ editMode ? 'Salvar Alterações' : 'Criar Disciplina' }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
+
+<style scoped>
+/* Dialog Styling */
+.dialog-card {
+  border-radius: 16px;
+}
+
+.dialog-header {
+  background: rgba(var(--v-theme-containerBg), 0.5);
+  padding: 1.5rem !important;
+}
+
+/* Color Selection */
+.color-selection {
+  padding: 1rem;
+  background: rgba(var(--v-theme-containerBg), 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-borderLight), 0.3);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0.75rem;
+}
+
+.color-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(var(--v-theme-surface), 0.8);
+  border: 2px solid transparent;
+}
+
+.color-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: rgba(var(--v-theme-surface), 1);
+}
+
+.color-option.selected {
+  border-color: rgba(var(--v-theme-primary), 0.5);
+  background: rgba(var(--v-theme-primary), 0.05);
+  transform: translateY(-1px);
+}
+
+.color-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.color-option:hover .color-circle {
+  transform: scale(1.1);
+}
+
+.color-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  color: rgb(var(--v-theme-darkText));
+}
+
+.color-option.selected .color-name {
+  color: rgb(var(--v-theme-primary));
+  font-weight: 600;
+}
+</style>
