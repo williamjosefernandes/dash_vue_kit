@@ -496,7 +496,7 @@ export const useStudyStore = defineStore('study', {
             if (cycle.createdAt) cycle.createdAt = new Date(cycle.createdAt);
             if (cycle.updatedAt) cycle.updatedAt = new Date(cycle.updatedAt);
             if (cycle.examDate) cycle.examDate = new Date(cycle.examDate);
-            cycle.subjects.forEach(subject => {
+            (cycle.subjects || []).forEach(subject => {
               if (subject.completedAt) subject.completedAt = new Date(subject.completedAt);
               if (subject.reviewDate) subject.reviewDate = new Date(subject.reviewDate);
             });
@@ -506,7 +506,7 @@ export const useStudyStore = defineStore('study', {
             if (this.activeCycle.createdAt) this.activeCycle.createdAt = new Date(this.activeCycle.createdAt);
             if (this.activeCycle.updatedAt) this.activeCycle.updatedAt = new Date(this.activeCycle.updatedAt);
             if (this.activeCycle.examDate) this.activeCycle.examDate = new Date(this.activeCycle.examDate);
-            this.activeCycle.subjects.forEach(subject => {
+            (this.activeCycle.subjects || []).forEach(subject => {
               if (subject.completedAt) subject.completedAt = new Date(subject.completedAt);
               if (subject.reviewDate) subject.reviewDate = new Date(subject.reviewDate);
             });
