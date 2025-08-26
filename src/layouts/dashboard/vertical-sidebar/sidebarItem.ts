@@ -15,77 +15,48 @@ export interface menu {
 }
 
 const sidebarItem: menu[] = [
-  { header: 'Starterkit' },
+  { header: 'Dashboard' },
   {
-    title: 'Sample Page',
-    icon: 'custom-sample',
+    title: 'Dashboard',
+    icon: 'custom-home',
     to: '/'
   },
-  { header: 'Others' },
+  { header: 'Estudos' },
   {
-    title: 'Menu levels',
-    icon: 'custom-level-1',
-    to: '#',
+    title: 'Disciplinas',
+    icon: 'custom-book',
+    to: '/subjects'
+  },
+  {
+    title: 'Tarefas',
+    icon: 'custom-check',
+    to: '/tasks'
+  },
+  {
+    title: 'Sessão de Estudo',
+    icon: 'custom-play',
+    to: '/study-session'
+  },
+  { header: 'Configurações' },
+  {
+    title: 'Planos de Estudo',
+    icon: 'custom-calendar',
+    to: '/study-plans',
     children: [
       {
-        title: 'Level 1',
-        to: ''
+        title: 'Meus Planos',
+        to: '/study-plans'
       },
       {
-        title: 'Level 1',
-        to: '',
-        children: [
-          {
-            title: 'Level 2',
-            to: ''
-          },
-          {
-            title: 'Level 2',
-            to: '/2.2level',
-            children: [
-              {
-                title: 'Level 3',
-                to: ''
-              }
-            ]
-          }
-        ]
+        title: 'Criar Plano',
+        to: '/study-plans/create'
       }
     ]
   },
   {
-    title: 'Sub Caption Levels',
-    icon: 'custom-level',
-    subCaption: 'Caption Collapse',
-    to: ''
-  },
-  {
-    title: 'Disabled Menu',
-    icon: 'custom-disabled',
-    disabled: true,
-    to: ''
-  },
-  {
-    title: 'Oval Chip',
-    icon: 'custom-info-circle',
-    to: '',
-    chip: 'Fire',
-    chipColor: 'error',
-    chipVariant: 'outlined'
-  },
-  {
-    title: 'Documentation',
-    icon: 'custom-support',
-    to: 'https://phoenixcoded.gitbook.io/able-pro',
-    type: 'external',
-    chip: 'gitbook',
-    chipColor: 'info',
-    chipVariant: 'flat'
-  },
-  {
-    title: 'Road Map',
-    icon: 'custom-roadmap',
-    to: 'https://phoenixcoded.gitbook.io/able-pro/v/vue/roadmap',
+    title: 'Relatórios',
+    icon: 'custom-chart',
+    to: '/reports',
     type: 'external'
   }
 ];

@@ -1,29 +1,26 @@
-# README
+# StudyManager - Sistema de Gerenciamento de Estudos
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Um sistema completo para gerenciar seus estudos, disciplinas, tarefas e sessões de estudo.
 
-### What is this repository for?
+## Funcionalidades
 
-- Quick summary
-- Version
-- [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+- **Dashboard**: Visão geral do progresso de estudos
+- **Disciplinas**: Gerenciamento de matérias e disciplinas
+- **Tarefas**: Controle de atividades e prazos
+- **Sessões de Estudo**: Timer para acompanhar tempo de estudo
+- **Relatórios**: Análise de desempenho e progresso
 
-### How do I get set up?
+## Como executar
 
-- Summary of set up.
-- Configuration
-- Dependencies
-- Database configuration
-- How to run tests
-- Deployment instructions
+1. Instale as dependências:
+```bash
+npm install
+```
 
-### Contribution guidelines
+2. Execute o projeto:
+```bash
+npm run dev
+```
 
-- Writing tests
-- Code review
-- Other guidelines
+## Tecnologias Utilizadas
 
-### Who do I talk to?
-
-- Repo owner or admin
-- Other community or team contact

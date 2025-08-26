@@ -45,12 +45,7 @@ router.beforeEach(async (to, from, next) => {
     next('/login');
   } else if (auth.user && to.path === '/login') {
     // User logged in and trying to access the login page
-    next({
-      query: {
-        ...to.query,
-        redirect: auth.returnUrl !== '/' ? to.fullPath : undefined
-      }
-    });
+    next('/main');
   } else {
     // All other scenarios, either public page or authorized access
     next();

@@ -8,7 +8,8 @@ const PublicRoutes = {
     {
       name: 'landing',
       path: '/',
-      component: () => import('@/views/authentication/LoginPage.vue')
+      component: () => import('@/views/authentication/LoginPage.vue'),
+      redirect: '/login'
     },
     {
       name: 'Login',
