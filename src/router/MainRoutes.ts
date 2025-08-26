@@ -42,6 +42,11 @@ const MainRoutes = {
       component: () => import('@/views/study/StudySessionPage.vue')
     },
     {
+      name: 'Cycles',
+      path: '/main/cycles',
+      component: () => import('@/views/study/CyclesPage.vue')
+    },
+    {
       name: 'StarterPage',
       path: '/main/starter',
       component: () => import('@/views/StarterPage.vue')

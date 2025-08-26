@@ -42,6 +42,11 @@ const sidebarItem: menu[] = [
     icon: 'custom-play',
     to: '/main/study-session'
   },
+  {
+    title: 'Ciclos de Estudos',
+    icon: 'custom-refresh',
+    to: '/main/cycles'
+  },
   { divider: true },
   { header: 'Outros' },
   {
