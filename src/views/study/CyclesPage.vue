@@ -253,27 +253,6 @@ onUnmounted(() => {
 <template>
   <!-- Header Fixo -->
   <div class="cycles-header">
-    <div class="header-top">
-      <div class="d-flex align-center justify-space-between">
-        <div class="d-flex align-center">
-          <v-avatar color="primary" size="40" class="me-3">
-            <span class="text-h6 font-weight-bold">G</span>
-          </v-avatar>
-          <h4 class="text-h4 text-white font-weight-bold">Gabaritte</h4>
-        </div>
-        
-        <div class="d-flex align-center">
-          <v-avatar size="40" class="me-3">
-            <img src="@/assets/images/users/avatar-6.png" alt="Perfil" />
-          </v-avatar>
-          <div class="text-white">
-            <h6 class="text-h6 mb-0">João Silva</h6>
-            <p class="text-caption mb-0 opacity-80">Estudante</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
     <div class="header-stats">
       <div class="stat-item">
         <div class="stat-icon">
@@ -786,13 +765,8 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  background: white;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.header-top {
-  padding: 1rem 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-stats {
@@ -822,11 +796,11 @@ onUnmounted(() => {
   height: 48px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  color: white;
+  color: rgb(var(--v-theme-darkText));
 }
 
 .weekly-progress {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Conteúdo Principal */
